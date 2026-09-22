@@ -225,45 +225,41 @@ class ModelService:
         self.parts_seg = None
         self.price_model = None
 
-        if not ULTRALYTICS_AVAILABLE:
-            raise RuntimeError("ultralytics package is required but not installed.")
+    def _ensure_models_loaded(self):
+        if self.damage_detect is None:
+            if ULTRALYTICS_AVAILABLE:
+                try:
+                    if os.path.exists(DAMAGE_DETECT_PATH):
+                        self.damage_detect = YOLO(DAMAGE_DETECT_PATH)
+                    if os.path.exists(DAMAGE_SEG_PATH):
+                        self.damage_seg = YOLO(DAMAGE_SEG_PATH)
+                    if os.path.exists(PARTS_SEG_PATH):
+                        self.parts_seg = YOLO(PARTS_SEG_PATH)
+                    logging.info("YOLO models loaded successfully.")
+                except Exception as e:
+                    logging.error(f"Error loading YOLO models: {e}")
 
-        try:
-            if os.path.exists(DAMAGE_DETECT_PATH):
-                self.damage_detect = YOLO(DAMAGE_DETECT_PATH)
-            if os.path.exists(DAMAGE_SEG_PATH):
-                self.damage_seg = YOLO(DAMAGE_SEG_PATH)
-            if os.path.exists(PARTS_SEG_PATH):
-                self.parts_seg = YOLO(PARTS_SEG_PATH)
-            logging.info("YOLO models loaded successfully.")
-        except Exception as e:
-            logging.error(f"Error loading YOLO models: {e}")
-            raise e
-
-        if not TF_AVAILABLE:
-            raise RuntimeError("tensorflow package is required but not installed.")
-
-        try:
-            if not os.path.exists(PRICE_MODEL_PATH):
-                raise FileNotFoundError(f"Missing Keras model file: {PRICE_MODEL_PATH}")
-            try:
-                self.price_model = tf.keras.models.load_model(
-                    PRICE_MODEL_PATH, 
-                    custom_objects={'Dense': CustomDense}, 
-                    compile=False
-                )
-            except Exception:
-                self.price_model = tf.keras.models.load_model(
-                    PRICE_MODEL_PATH, 
-                    custom_objects={'Dense': CustomDense}, 
-                    safe_mode=False
-                )
-            logging.info("Keras price.keras model loaded successfully.")
-        except Exception as e:
-            logging.error(f"Error loading Keras price model: {e}")
-            raise e
+        if self.price_model is None:
+            if TF_AVAILABLE and os.path.exists(PRICE_MODEL_PATH):
+                try:
+                    try:
+                        self.price_model = tf.keras.models.load_model(
+                            PRICE_MODEL_PATH, 
+                            custom_objects={'Dense': CustomDense}, 
+                            compile=False
+                        )
+                    except Exception:
+                        self.price_model = tf.keras.models.load_model(
+                            PRICE_MODEL_PATH, 
+                            custom_objects={'Dense': CustomDense}, 
+                            safe_mode=False
+                        )
+                    logging.info("Keras price.keras model loaded successfully.")
+                except Exception as e:
+                    logging.error(f"Error loading Keras price model: {e}")
 
     def predict_combined_price(self, car_brand, car_model, car_variant, car_type, year, detections_raw):
+        self._ensure_models_loaded()
         """
         Run price.keras once for all detected damages combined.
         Input features:
@@ -374,6 +370,7 @@ class ModelService:
         car_type: str = "Petrol",
         year: int = 2020
     ):
+        self._ensure_models_loaded()
         result = {
             "success": True,
             "combined_b64": None,
