@@ -242,21 +242,27 @@ class ModelService:
         if self.price_model is None:
             if TF_AVAILABLE and os.path.exists(PRICE_MODEL_PATH):
                 try:
-                    try:
-                        self.price_model = tf.keras.models.load_model(
-                            PRICE_MODEL_PATH, 
-                            custom_objects={'Dense': CustomDense}, 
-                            compile=False
-                        )
-                    except Exception:
-                        self.price_model = tf.keras.models.load_model(
-                            PRICE_MODEL_PATH, 
-                            custom_objects={'Dense': CustomDense}, 
-                            safe_mode=False
-                        )
+                    self.price_model = self._load_keras_model_safe(PRICE_MODEL_PATH)
                     logging.info("Keras price.keras model loaded successfully.")
                 except Exception as e:
                     logging.error(f"Error loading Keras price model: {e}")
+
+    def _load_keras_model_safe(self, model_path):
+        import zipfile
+        import tempfile
+        try:
+            return tf.keras.models.load_model(model_path, compile=False)
+        except Exception:
+            temp_dir = tempfile.mkdtemp()
+            clean_path = os.path.join(temp_dir, "price_clean.keras")
+            with zipfile.ZipFile(model_path, 'r') as zin, zipfile.ZipFile(clean_path, 'w') as zout:
+                for item in zin.infolist():
+                    data = zin.read(item.filename)
+                    if item.filename == 'config.json':
+                        s = data.decode('utf-8').replace('"quantization_config": null', '"quantization_config_ignored": null')
+                        data = s.encode('utf-8')
+                    zout.writestr(item, data)
+            return tf.keras.models.load_model(clean_path, compile=False)
 
     def predict_combined_price(self, car_brand, car_model, car_variant, car_type, year, detections_raw):
         self._ensure_models_loaded()
