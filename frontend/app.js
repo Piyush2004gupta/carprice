@@ -182,10 +182,7 @@ form.addEventListener("submit", async (e) => {
     formData.append("car_type", document.getElementById("car-type").value);
     formData.append("year", document.getElementById("car-year").value);
 
-    const backendPort = window.location.port === "3001" ? "8001" : "8000";
-    const apiUrl = `${window.location.protocol}//${window.location.hostname}:${backendPort}/api/analyze`;
-
-    const response = await fetch(apiUrl, {
+    const response = await fetch("/api/analyze", {
       method: "POST",
       body: formData
     });
