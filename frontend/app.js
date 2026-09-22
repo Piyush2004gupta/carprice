@@ -182,7 +182,7 @@ form.addEventListener("submit", async (e) => {
     formData.append("car_type", document.getElementById("car-type").value);
     formData.append("year", document.getElementById("car-year").value);
 
-    const response = await fetch("http://localhost:8000/api/analyze", {
+    const response = await fetch("http://localhost:8001/api/analyze", {
       method: "POST",
       body: formData
     });

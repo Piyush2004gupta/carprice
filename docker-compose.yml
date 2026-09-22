@@ -6,7 +6,7 @@ services:
     image: carbackend:latest
     container_name: carbackend
     ports:
-      - "8000:8000"
+      - "8001:8000"
     volumes:
       - ./backend:/app
     restart: always
@@ -16,7 +16,7 @@ services:
     image: carfrontend:latest
     container_name: carfrontend
     ports:
-      - "3000:3000"
+      - "3001:3000"
     volumes:
       - ./frontend:/app
     depends_on:

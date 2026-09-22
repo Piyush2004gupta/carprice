@@ -15,6 +15,9 @@ except ImportError:
 try:
     import tensorflow as tf
     TF_AVAILABLE = True
+    class CustomDense(tf.keras.layers.Dense):
+        def __init__(self, *args, quantization_config=None, **kwargs):
+            super().__init__(*args, **kwargs)
 except ImportError:
     TF_AVAILABLE = False
     logging.warning("tensorflow package not found.")
@@ -243,7 +246,18 @@ class ModelService:
         try:
             if not os.path.exists(PRICE_MODEL_PATH):
                 raise FileNotFoundError(f"Missing Keras model file: {PRICE_MODEL_PATH}")
-            self.price_model = tf.keras.models.load_model(PRICE_MODEL_PATH)
+            try:
+                self.price_model = tf.keras.models.load_model(
+                    PRICE_MODEL_PATH, 
+                    custom_objects={'Dense': CustomDense}, 
+                    compile=False
+                )
+            except Exception:
+                self.price_model = tf.keras.models.load_model(
+                    PRICE_MODEL_PATH, 
+                    custom_objects={'Dense': CustomDense}, 
+                    safe_mode=False
+                )
             logging.info("Keras price.keras model loaded successfully.")
         except Exception as e:
             logging.error(f"Error loading Keras price model: {e}")
