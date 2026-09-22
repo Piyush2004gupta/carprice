@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  backend:
+    image: 231324680416.dkr.ecr.ap-south-1.amazonaws.com/carbackend:latest
+    container_name: carbackend
+    ports:
+      - "8000:8000"
+    restart: always
+
+  frontend:
+    image: 231324680416.dkr.ecr.ap-south-1.amazonaws.com/carfrontend:latest
+    container_name: carfrontend
+    ports:
+      - "80:3000"
+    depends_on:
+      - backend
+    restart: always
