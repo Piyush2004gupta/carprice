@@ -93,17 +93,31 @@ sections.forEach((s) => observer.observe(s));
 // ── Hamburger menu ────────────────────────────────────────
 const hamburger = document.getElementById("hamburger");
 const navLinksEl = document.getElementById("nav-links");
-hamburger.addEventListener("click", () => {
-  navLinksEl.style.display = navLinksEl.style.display === "flex" ? "none" : "flex";
-  navLinksEl.style.flexDirection = "column";
-  navLinksEl.style.position = "absolute";
-  navLinksEl.style.top = "60px";
-  navLinksEl.style.left = "0";
-  navLinksEl.style.right = "0";
-  navLinksEl.style.background = "rgba(10,10,11,0.98)";
-  navLinksEl.style.padding = "16px 24px";
-  navLinksEl.style.borderBottom = "1px solid rgba(255,255,255,0.08)";
-});
+
+if (hamburger && navLinksEl) {
+  hamburger.addEventListener("click", (e) => {
+    e.stopPropagation();
+    hamburger.classList.toggle("active");
+    navLinksEl.classList.toggle("active");
+  });
+
+  // Close menu when tapping any link
+  document.querySelectorAll(".nav-link, #nav-cta").forEach((link) => {
+    link.addEventListener("click", () => {
+      hamburger.classList.remove("active");
+      navLinksEl.classList.remove("active");
+    });
+  });
+
+  // Close menu when clicking outside
+  document.addEventListener("click", (e) => {
+    if (!navLinksEl.contains(e.target) && !hamburger.contains(e.target)) {
+      hamburger.classList.remove("active");
+      navLinksEl.classList.remove("active");
+    }
+  });
+}
+
 
 // ── Animate stat counters ─────────────────────────────────
 function animateCounter(el) {
@@ -271,12 +285,7 @@ function createCombinedPriceCard(cp, detections) {
   `).join("");
 
   const box = document.createElement("div");
-  box.style.cssText = `
-    background: linear-gradient(135deg, rgba(15,23,42,0.97), rgba(30,41,59,0.92));
-    border: 1px solid rgba(59,130,246,0.45);
-    box-shadow: 0 12px 36px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.07);
-    border-radius: 18px; padding: 26px; display:flex; flex-direction:column; gap:22px;
-  `;
+  box.className = "combined-price-card";
   box.innerHTML = `
     <!-- Header -->
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:16px;">
@@ -296,7 +305,7 @@ function createCombinedPriceCard(cp, detections) {
     </div>
 
     <!-- Big Totals -->
-    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px;">
+    <div class="price-totals-grid">
       <div style="background:rgba(59,130,246,0.12);border:1px solid rgba(59,130,246,0.35);border-radius:14px;padding:18px;text-align:center;">
         <div style="font-size:10px;font-weight:700;color:#93c5fd;text-transform:uppercase;letter-spacing:0.08em;">OEM Total Estimate</div>
         <div style="font-size:28px;font-weight:900;color:#60a5fa;margin:6px 0 2px;">₹${fmt(cp.oem_total_estimate)}</div>
@@ -314,7 +323,7 @@ function createCombinedPriceCard(cp, detections) {
       <div style="font-size:11px;font-weight:700;color:#cbd5e1;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:14px;">
         Itemised Cost Breakdown
       </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px 28px;font-size:12px;">
+      <div class="price-itemised-grid" style="font-size:12px;">
         ${[
           ['OEM Parts Price',        cp.total_oem_part_price,        '#93c5fd'],
           ['Aftermarket Parts Price', cp.total_aftermarket_part_price, '#a7f3d0'],
@@ -357,21 +366,9 @@ function showResult(data) {
   const cardContainer = document.getElementById("predict-form-card");
   cardContainer.style.maxWidth = "1200px";
 
-
-
   data.results.forEach((res, index) => {
     const card = document.createElement("div");
     card.className = "analysis-result-card";
-    card.style.cssText = `
-      background: var(--bg-3);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 28px;
-      margin-bottom: 36px;
-      display: flex;
-      flex-direction: column;
-      gap: 24px;
-    `;
 
     if (!res.success) {
       card.innerHTML = `
@@ -401,10 +398,9 @@ function showResult(data) {
     `;
     card.appendChild(header);
 
-
     // ── Side by Side Images ──────────────────────────────────
     const imageGrid = document.createElement("div");
-    imageGrid.style.cssText = "display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:20px;";
+    imageGrid.className = "result-images-grid";
 
     const imgPanels = [
       { src: res.original_b64, label: "Original Car Image", badge: "Uploaded", accentColor: "rgba(255,255,255,0.06)", textColor: "var(--text-muted)", borderColor: "var(--border)" },
@@ -459,7 +455,7 @@ function showResult(data) {
       dashSection.appendChild(indLabel);
 
       const colGrid = document.createElement("div");
-      colGrid.style.cssText = "display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:16px;";
+      colGrid.className = "damage-cards-grid";
 
       const damageColors = {
         'dent': { bg: 'rgba(249,115,22,0.12)', border: 'rgba(249,115,22,0.3)', text: '#fb923c', icon: '🔨' },
