@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="CarWorth AI — Know what your car is actually worth today. AI-powered vehicle valuation backed by 2.3 million real transactions." />
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>CarWorth AI — AI-Powered Car Valuation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css?v=3.0" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-inner">
+      <a href="#" class="nav-logo" id="nav-logo-link">
+        <div class="logo-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h11a2 2 0 012 2v3" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+            <rect x="9" y="11" width="14" height="10" rx="2" stroke="#fff" stroke-width="2"/>
+            <circle cx="12" cy="21" r="1" fill="#fff"/>
+            <circle cx="20" cy="21" r="1" fill="#fff"/>
+          </svg>
+        </div>
+        <span class="logo-text">CarWorth</span>
+        <span class="logo-badge">AI</span>
+      </a>
+      <ul class="nav-links" id="nav-links">
+        <li><a href="#hero" class="nav-link active" id="nav-home">Home</a></li>
+        <li><a href="#dashboard" class="nav-link" id="nav-dashboard">Dashboard</a></li>
+        <li><a href="#process" class="nav-link" id="nav-how">How it works</a></li>
+        <li><a href="#about" class="nav-link" id="nav-about">About</a></li>
+      </ul>
+      <div class="nav-actions">
+        <a href="#predict" class="btn btn-primary" id="nav-cta">Get estimate</a>
+        <button class="hamburger" id="hamburger" aria-label="Toggle menu">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero" id="hero">
+    <div class="hero-inner">
+      <div class="hero-content">
+        <p class="hero-eyebrow" id="hero-eyebrow">AI-POWERED VALUATION</p>
+        <h1 class="hero-title" id="hero-title">
+          Know what your<br />
+          car is actually<br />
+          <span class="hero-title-accent">worth today.</span>
+        </h1>
+        <p class="hero-desc" id="hero-desc">
+          Enter your car's details and our AI returns an accurate resale estimate in seconds backed by 2.3 million real transactions.
+        </p>
+        <div class="hero-actions">
+          <a href="#predict" class="btn btn-primary btn-lg" id="hero-cta-primary">Predict price</a>
+          <a href="#dashboard" class="btn btn-ghost btn-lg" id="hero-cta-secondary">See dashboard</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STATS -->
+  <section class="stats-section" id="stats-section">
+    <div class="section-inner">
+      <div class="stats-divider"></div>
+      <div class="stats-row" id="stats-row">
+        <div class="stat-item" id="stat-accuracy">
+          <span class="stat-value" data-target="98.4" data-suffix="%">0%</span>
+          <span class="stat-label">accuracy</span>
+        </div>
+        <div class="stat-item" id="stat-cars">
+          <span class="stat-value" data-target="2.3" data-suffix="M">0M</span>
+          <span class="stat-label">cars analyzed</span>
+        </div>
+        <div class="stat-item" id="stat-users">
+          <span class="stat-value" data-target="150" data-suffix="K">0K</span>
+          <span class="stat-label">users</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BRANDS -->
+  <section class="brands-section" id="brands-section">
+    <div class="section-inner">
+      <div class="brands-row" id="brands-row">
+        <span class="brands-label">WORKS FOR</span>
+        <div class="brand-ticker">
+          <div class="brand-track" id="brand-track">
+            <span class="brand-name">Toyota</span>
+            <span class="brand-name">BMW</span>
+            <span class="brand-name">Audi</span>
+            <span class="brand-name">Mercedes</span>
+            <span class="brand-name">Honda</span>
+            <span class="brand-name">Ford</span>
+            <span class="brand-name">Hyundai</span>
+            <span class="brand-name">Tesla</span>
+            <span class="brand-name">Kia</span>
+            <span class="brand-name">Nissan</span>
+            <span class="brand-name">Volkswagen</span>
+            <span class="brand-name">Chevrolet</span>
+            <span class="brand-name">Toyota</span>
+            <span class="brand-name">BMW</span>
+            <span class="brand-name">Audi</span>
+            <span class="brand-name">Mercedes</span>
+            <span class="brand-name">Honda</span>
+            <span class="brand-name">Ford</span>
+            <span class="brand-name">Hyundai</span>
+            <span class="brand-name">Tesla</span>
+            <span class="brand-name">Kia</span>
+            <span class="brand-name">Nissan</span>
+            <span class="brand-name">Volkswagen</span>
+            <span class="brand-name">Chevrolet</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROCESS -->
+  <section class="process-section" id="process">
+    <div class="section-inner process-inner">
+      <div class="process-left">
+        <p class="section-eyebrow">PROCESS</p>
+        <h2 class="section-title">Three steps to your <span class="accent-text">estimate</span></h2>
+        <p class="section-desc">No account needed, no waiting. Just enter your details and the AI does the rest.</p>
+      </div>
+      <div class="process-cards" id="process-cards">
+        <div class="process-card" id="process-card-1">
+          <span class="card-num">01</span>
+          <h3 class="card-title">Enter details</h3>
+          <p class="card-desc">Make, model, year, mileage, condition, and location.</p>
+        </div>
+        <div class="process-card" id="process-card-2">
+          <span class="card-num">02</span>
+          <h3 class="card-title">AI processes</h3>
+          <p class="card-desc">Cross-references 2.3M listings across your region.</p>
+        </div>
+        <div class="process-card" id="process-card-3">
+          <span class="card-num">03</span>
+          <h3 class="card-title">Get estimate</h3>
+          <p class="card-desc">Accurate valuation with price range and market context.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PREDICT FORM -->
+  <section class="predict-section" id="predict">
+    <div class="section-inner">
+      <div class="predict-header">
+        <p class="section-eyebrow">GET YOUR ESTIMATE</p>
+        <h2 class="section-title">Upload your car image</h2>
+        <p class="section-desc">Our AI will analyze your car photo for damage and return an accurate valuation instantly.</p>
+      </div>
+      <div class="predict-form-card" id="predict-form-card">
+        <form class="predict-form" id="predict-form" novalidate>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="car-brand">Car Brand</label>
+              <select id="car-brand" name="car_brand" class="form-select" required></select>
+            </div>
+            <div class="form-group">
+              <label for="car-model">Car Model</label>
+              <select id="car-model" name="car_model" class="form-select" required></select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="car-variant">Variant</label>
+              <select id="car-variant" name="car_variant" class="form-select" required>
+                <option value="Base (synthetic)">Base (synthetic)</option>
+                <option value="Mid (synthetic)">Mid (synthetic)</option>
+                <option value="Top (synthetic)">Top (synthetic)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="car-type">Fuel / Car Type</label>
+              <select id="car-type" name="car_type" class="form-select" required>
+                <option value="Petrol">Petrol</option>
+                <option value="Diesel">Diesel</option>
+                <option value="Hybrid">Hybrid</option>
+                <option value="Electric">Electric</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="car-year">Manufacturing Year</label>
+              <select id="car-year" name="year" class="form-select" required></select>
+            </div>
+          </div>
+
+          <div class="form-group" id="fg-image">
+            <label for="car-image">Upload Car Photo (1 Image)</label>
+            <input type="file" id="car-image" name="images" class="form-input" accept="image/*" required />
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-full" id="form-submit-btn">
+            <span class="btn-text">Analyze Car & Estimate Cost</span>
+            <span class="btn-loader" style="display:none;">Analyzing...</span>
+          </button>
+        </form>
+        <div class="result-panel" id="result-panel" style="display:none;">
+          <div class="result-header">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#22c55e" stroke-width="2"/><path d="M8 12l3 3 5-5" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span id="analysis-message-text">Analysis complete</span>
+          </div>
+          
+          <div id="results-container" style="display: flex; flex-direction: column; gap: 32px; margin-bottom: 24px;">
+            <!-- Galleries injected here -->
+          </div>
+          
+          <!-- Download Report Actions -->
+          <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px;">
+            <button class="btn btn-primary" id="download-pdf-btn" type="button" style="flex:1; min-width:200px; background:linear-gradient(135deg, #ef4444, #dc2626); border-color:#ef4444; gap:8px;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 15V3m0 12l-4-4m4 4l4-4M2 17l.621 2.485A2 2 0 004.561 21h14.878a2 2 0 001.94-1.515L22 17" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span>Download PDF Report</span>
+            </button>
+          </div>
+
+          <button class="btn btn-ghost btn-full" id="reset-btn">Analyze another car</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ABOUT -->
+  <section class="about-section" id="about">
+    <div class="section-inner about-inner">
+      <div class="about-content">
+        <p class="section-eyebrow">ABOUT</p>
+        <h2 class="section-title">Built on real <span class="accent-text">transaction data</span></h2>
+        <p class="section-desc">CarWorth AI was trained on over 2.3 million verified vehicle sales across major markets. Our model updates daily, ensuring your estimate reflects the current market.</p>
+        <div class="about-features">
+          <div class="feature-item">
+            <div class="feature-dot blue"></div>
+            <span>Daily model retraining on live auction data</span>
+          </div>
+          <div class="feature-item">
+            <div class="feature-dot purple"></div>
+            <span>Region-specific pricing adjustments</span>
+          </div>
+          <div class="feature-item">
+            <div class="feature-dot green"></div>
+            <span>98.4% valuation accuracy vs. final sale price</span>
+          </div>
+        </div>
+      </div>
+      <div class="about-visual">
+        <div class="about-card">
+          <div class="about-card-header">
+            <span class="about-card-label">Model Performance</span>
+            <span class="about-card-badge">LIVE</span>
+          </div>
+          <div class="perf-row">
+            <span class="perf-key">Accuracy</span>
+            <div class="perf-bar-track"><div class="perf-bar-fill" style="width:98.4%; background: #3b82f6;"></div></div>
+            <span class="perf-val">98.4%</span>
+          </div>
+          <div class="perf-row">
+            <span class="perf-key">Coverage</span>
+            <div class="perf-bar-track"><div class="perf-bar-fill" style="width:94%; background: #8b5cf6;"></div></div>
+            <span class="perf-val">94%</span>
+          </div>
+          <div class="perf-row">
+            <span class="perf-key">Confidence</span>
+            <div class="perf-bar-track"><div class="perf-bar-fill" style="width:87%; background: #22c55e;"></div></div>
+            <span class="perf-val">87%</span>
+          </div>
+          <div class="about-card-footer">
+            <span>Last updated: just now</span>
+            <span>v4.2.1</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer" id="footer">
+    <div class="section-inner footer-inner">
+      <div class="footer-brand">
+        <a href="#" class="nav-logo">
+          <div class="logo-icon">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+              <path d="M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h11a2 2 0 012 2v3" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+              <rect x="9" y="11" width="14" height="10" rx="2" stroke="#fff" stroke-width="2"/>
+            </svg>
+          </div>
+          <span class="logo-text">CarWorth</span>
+          <span class="logo-badge">AI</span>
+        </a>
+        <p class="footer-tagline">AI-powered car valuation for the modern market.</p>
+      </div>
+      <div class="footer-links-group">
+        <p class="footer-group-label">Product</p>
+        <a href="#hero" class="footer-link">Home</a>
+        <a href="#predict" class="footer-link">Get estimate</a>
+        <a href="#dashboard" class="footer-link">Dashboard</a>
+      </div>
+      <div class="footer-links-group">
+        <p class="footer-group-label">Company</p>
+        <a href="#about" class="footer-link">About</a>
+        <a href="#process" class="footer-link">How it works</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>2026 CarWorth AI. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script src="app.js?v=10005"></script>
+</body>
+</html>
+
