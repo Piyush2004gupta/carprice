@@ -24,7 +24,7 @@ except ImportError:
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DAMAGE_DETECT_PATH = os.path.join(BASE_DIR, "cardetection1.pt")
-DAMAGE_SEG_PATH = os.path.join(BASE_DIR, "Segmentation1.pt")
+DAMAGE_SEG_PATH = os.path.join(BASE_DIR, "segmentation1.pt")
 PARTS_SEG_PATH = os.path.join(BASE_DIR, "exp.pt")
 PRICE_MODEL_PATH = os.path.join(BASE_DIR, "price.keras")
 
