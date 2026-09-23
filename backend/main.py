@@ -6,7 +6,7 @@ import base64
 from model_service import model_service
 import uvicorn
 
-app = FastAPI(title="CarWorth AI Backend")
+app = FastAPI(title="RepairLensAI Backend")
 
 app.add_middleware(
     CORSMiddleware,

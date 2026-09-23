@@ -1,4 +1,4 @@
-// CarWorth AI — app.js
+// RepairLensAI — app.js
 
 // ── Dataset Constants & Mappings ──────────────────────────
 const BRANDS_LIST = [
@@ -699,7 +699,7 @@ function buildReportHTML(data, meta) {
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <title>CarWorth AI — Damage & Valuation Report</title>
+  <title>RepairLensAI — Damage & Valuation Report</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: Arial, sans-serif; color: #1e293b; background: #fff; padding: 32px; font-size: 13px; }
@@ -715,7 +715,7 @@ function buildReportHTML(data, meta) {
   <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px;padding-bottom:20px;border-bottom:3px solid #3b82f6;">
     <div>
       <div style="font-size:22px;font-weight:900;color:#0f172a;letter-spacing:-0.02em;">
-        🚗 CarWorth <span style="color:#3b82f6;">AI</span>
+        🔍 RepairLens <span style="color:#3b82f6;">AI</span>
       </div>
       <div style="font-size:12px;color:#64748b;margin-top:4px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">
         Damage Detection & Repair Cost Estimation Report
@@ -751,8 +751,8 @@ function buildReportHTML(data, meta) {
 
   <!-- Footer -->
   <div style="margin-top:40px;padding-top:16px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;font-size:11px;color:#94a3b8;">
-    <span>CarWorth AI — AI-Powered Car Damage & Valuation Platform</span>
-    <span>Report ID: CW-${Date.now()}</span>
+    <span>RepairLensAI — AI-Powered Car Damage & Valuation Platform</span>
+    <span>Report ID: RL-${Date.now()}</span>
   </div>
 </body>
 </html>`;
