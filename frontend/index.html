@@ -3,375 +3,566 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="RepairLensAI — Know what your car repair & valuation costs actually are today. AI-powered vehicle damage assessment." />
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-  <meta http-equiv="Pragma" content="no-cache" />
-  <meta http-equiv="Expires" content="0" />
-  <title>RepairLensAI — AI-Powered Car Damage & Price Estimation</title>
+  <meta name="description" content="RepairLensAI — Know the repair cost before you open the bonnet. AI-powered car damage assessment and repair estimation." />
+  <title>RepairLensAI — AI-Powered Car Damage & Repair Cost Estimation</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=5.0" />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <link rel="stylesheet" href="style.css?v=6.0" />
 </head>
 <body>
 
   <!-- NAVBAR -->
   <nav class="navbar" id="navbar">
     <div class="nav-inner">
-      <a href="#" class="nav-logo" id="nav-logo-link">
+      <a href="#" class="nav-logo" id="nav-logo-link" data-page="home">
         <div class="logo-icon">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <path d="M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h11a2 2 0 012 2v3" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
-            <rect x="9" y="11" width="14" height="10" rx="2" stroke="#fff" stroke-width="2"/>
-            <circle cx="12" cy="21" r="1" fill="#fff"/>
-            <circle cx="20" cy="21" r="1" fill="#fff"/>
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+            <rect x="1" y="1" width="14" height="14" rx="2" stroke="#fff" stroke-width="1.5"/>
+            <path d="M4 11l3-3 2 2 3-4" stroke="#E8622A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </div>
-        <span class="logo-text">RepairLens</span>
-        <span class="logo-badge">AI</span>
+        <span class="logo-text">RepairLens</span><span class="logo-ai">AI</span>
       </a>
+
       <ul class="nav-links" id="nav-links">
-        <li><a href="#hero" class="nav-link active" id="nav-home">Home</a></li>
-        <li><a href="#dashboard" class="nav-link" id="nav-dashboard">Dashboard</a></li>
-        <li><a href="#process" class="nav-link" id="nav-how">How it works</a></li>
-        <li><a href="#about" class="nav-link" id="nav-about">About</a></li>
+        <li><a href="#" class="nav-link active" id="nav-home" data-page="home">Home</a></li>
+        <li><a href="#" class="nav-link" id="nav-pricing" data-page="pricing">View Pricing</a></li>
+        <li><a href="#" class="nav-link" id="nav-signin" data-page="signin">Sign in</a></li>
+        <li><a href="#" class="nav-link nav-link-report" id="nav-report" data-page="report">New report</a></li>
+        <li><button class="btn btn-orange razorpay-btn" data-plan="Quick Report Pass (₹29)" data-price="29" style="padding:6px 14px; font-size:13px; display:inline-flex; align-items:center; gap:6px;">💳 Pay ₹29 (Razorpay)</button></li>
       </ul>
-      <div class="nav-actions">
-        <a href="#predict" class="btn btn-primary" id="nav-cta">Get estimate</a>
-        <button class="hamburger" id="hamburger" aria-label="Toggle menu">
-          <span></span><span></span><span></span>
-        </button>
-      </div>
+
+      <button class="hamburger" id="hamburger" aria-label="Toggle menu">
+        <span></span><span></span><span></span>
+      </button>
     </div>
   </nav>
 
-  <!-- HERO -->
-  <section class="hero" id="hero">
-    <div class="hero-inner">
-      <div class="hero-content">
-        <p class="hero-eyebrow" id="hero-eyebrow">AI-POWERED VALUATION</p>
-        <h1 class="hero-title" id="hero-title">
-          Know what your<br class="desktop-br" />
-          car is actually<br class="desktop-br" />
-          <span class="hero-title-accent">worth today.</span>
-        </h1>
-        <p class="hero-desc" id="hero-desc">
-          Enter your car's details and our AI returns an accurate resale estimate in seconds backed by 2.3 million real transactions.
-        </p>
-        <div class="hero-actions">
-          <a href="#predict" class="btn btn-primary btn-lg" id="hero-cta-primary">Predict price</a>
+  <!-- PAGE: HOME -->
+  <div id="page-home" class="page active">
+
+    <section class="hero" id="hero">
+      <div class="hero-inner">
+        <div class="hero-content">
+          <p class="hero-eyebrow">DAMAGE ESTIMATION &nbsp;&middot;&nbsp; AI-POWERED</p>
+          <h1 class="hero-title">
+            Know the<br/>
+            repair cost<br/>
+            before you<br/>
+            open the<br/>
+            bonnet.
+          </h1>
+          <p class="hero-desc">
+            Upload a photo of the damage, tell us the car &mdash;
+            RepairLensAI reads the panel, the dent, the crack, and
+            returns a repair estimate in seconds.
+          </p>
+          <div class="hero-actions">
+            <button class="btn btn-orange btn-lg" id="hero-cta" data-page="report">Start a report</button>
+            <button class="btn btn-outline btn-lg razorpay-btn" data-plan="Single Report Token" data-price="29">💳 Pay &#8377;29 via Razorpay</button>
+            <button class="btn btn-outline btn-lg" id="hero-pricing" data-page="pricing">See pricing</button>
+          </div>
+        </div>
+
+        <div class="hero-visual">
+          <div class="scan-frame">
+            <div class="corner top-left"></div>
+            <div class="corner top-right"></div>
+            <div class="corner bottom-left"></div>
+            <div class="corner bottom-right"></div>
+          </div>
+
+          <svg class="car-svg" viewBox="0 0 340 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M50 130 Q55 105 80 95 L130 80 Q155 72 170 72 Q185 72 200 75 L255 88 Q280 96 295 110 L310 130 Q315 138 310 145 L55 145 Q48 142 50 130Z"
+              stroke="#9BA3B2" stroke-width="2" fill="none" stroke-linejoin="round"/>
+            <path d="M110 95 Q125 68 170 62 Q215 58 230 88"
+              stroke="#9BA3B2" stroke-width="2" fill="none" stroke-linecap="round"/>
+            <path d="M118 92 Q128 72 162 66 Q170 65 170 72 L130 80Z"
+              stroke="#B0B8C4" stroke-width="1.5" fill="rgba(180,195,210,0.08)" stroke-linejoin="round"/>
+            <path d="M175 72 Q210 66 228 84 L200 75Z"
+              stroke="#B0B8C4" stroke-width="1.5" fill="rgba(180,195,210,0.08)" stroke-linejoin="round"/>
+            <circle cx="260" cy="145" r="24" stroke="#E8622A" stroke-width="2.5" fill="none"/>
+            <circle cx="260" cy="145" r="10" stroke="#E8622A" stroke-width="1.5" fill="none"/>
+            <circle cx="100" cy="145" r="24" stroke="#6B9EFF" stroke-width="2.5" fill="none"/>
+            <circle cx="100" cy="145" r="10" stroke="#6B9EFF" stroke-width="1.5" fill="none"/>
+            <path d="M175 95 L163 115 L172 115 L160 135 L178 110 L169 110Z"
+              stroke="#E8622A" stroke-width="1.5" stroke-linejoin="round" fill="rgba(232,98,42,0.12)"/>
+          </svg>
+
+          <div class="annotation annotation-left">
+            <span class="annotation-label">Front bumper</span>
+            <span class="annotation-price">&#8377;4,300&ndash;5,600</span>
+          </div>
+
+          <div class="annotation annotation-right">
+            <span class="annotation-label">Confidence</span>
+            <span class="annotation-price">94.2%</span>
+          </div>
         </div>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- STATS -->
-  <section class="stats-section" id="stats-section">
-    <div class="section-inner">
-      <div class="stats-divider"></div>
-      <div class="stats-row" id="stats-row">
-        <div class="stat-item" id="stat-accuracy">
-          <span class="stat-value" data-target="98.4" data-suffix="%">0%</span>
-          <span class="stat-label">accuracy</span>
-        </div>
-        <div class="stat-item" id="stat-cars">
-          <span class="stat-value" data-target="2.3" data-suffix="M">0M</span>
-          <span class="stat-label">cars analyzed</span>
-        </div>
-        <div class="stat-item" id="stat-users">
-          <span class="stat-value" data-target="150" data-suffix="K">0K</span>
-          <span class="stat-label">users</span>
+    <section class="stats-section" id="stats-row">
+      <div class="section-inner">
+        <div class="stats-row">
+          <div class="stat-item">
+            <span class="stat-value">&lt;30s</span>
+            <span class="stat-label">average time to estimate</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-item">
+            <span class="stat-value">18+</span>
+            <span class="stat-label">brands recognised</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-item">
+            <span class="stat-value">&#8377;29</span>
+            <span class="stat-label">starting price per report</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-item">
+            <span class="stat-value">94%</span>
+            <span class="stat-label">estimate confidence, typical</span>
+          </div>
         </div>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- BRANDS -->
-  <section class="brands-section" id="brands-section">
-    <div class="section-inner">
-      <div class="brands-row" id="brands-row">
-        <span class="brands-label">WORKS FOR</span>
-        <div class="brand-ticker">
-          <div class="brand-track" id="brand-track">
-            <span class="brand-name">Toyota</span>
-            <span class="brand-name">BMW</span>
-            <span class="brand-name">Audi</span>
-            <span class="brand-name">Mercedes</span>
-            <span class="brand-name">Honda</span>
-            <span class="brand-name">Ford</span>
-            <span class="brand-name">Hyundai</span>
-            <span class="brand-name">Tesla</span>
-            <span class="brand-name">Kia</span>
-            <span class="brand-name">Nissan</span>
-            <span class="brand-name">Volkswagen</span>
-            <span class="brand-name">Chevrolet</span>
-            <span class="brand-name">Toyota</span>
-            <span class="brand-name">BMW</span>
-            <span class="brand-name">Audi</span>
-            <span class="brand-name">Mercedes</span>
-            <span class="brand-name">Honda</span>
-            <span class="brand-name">Ford</span>
-            <span class="brand-name">Hyundai</span>
-            <span class="brand-name">Tesla</span>
-            <span class="brand-name">Kia</span>
-            <span class="brand-name">Nissan</span>
-            <span class="brand-name">Volkswagen</span>
-            <span class="brand-name">Chevrolet</span>
+    <section class="how-section">
+      <div class="section-inner">
+        <p class="section-eyebrow">HOW IT WORKS</p>
+        <h2 class="section-title">Three steps to your repair estimate</h2>
+        <div class="how-cards">
+          <div class="how-card">
+            <div class="how-num">01</div>
+            <h3>Tell us the car</h3>
+            <p>Brand, model, year, variant &mdash; so we price parts correctly for your exact vehicle.</p>
+          </div>
+          <div class="how-card">
+            <div class="how-num">02</div>
+            <h3>Upload the damage photo</h3>
+            <p>One clear photo is enough. Our models detect dents, cracks, scratches and more.</p>
+          </div>
+          <div class="how-card">
+            <div class="how-num">03</div>
+            <h3>Get your report</h3>
+            <p>Itemised OEM vs aftermarket costs, labour, paint &mdash; delivered in under 30 seconds.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <div class="section-inner footer-inner">
+        <div class="footer-brand">
+          <a href="#" class="nav-logo" data-page="home">
+            <div class="logo-icon logo-icon-sm">
+              <svg width="11" height="11" viewBox="0 0 16 16" fill="none">
+                <rect x="1" y="1" width="14" height="14" rx="2" stroke="#fff" stroke-width="1.5"/>
+                <path d="M4 11l3-3 2 2 3-4" stroke="#E8622A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <span class="logo-text">RepairLens</span><span class="logo-ai">AI</span>
+          </a>
+          <p class="footer-tagline">AI-powered car damage assessment &amp; repair cost estimation.</p>
+        </div>
+        <div class="footer-links-group">
+          <p class="footer-group-label">Product</p>
+          <a href="#" class="footer-link" data-page="home">Home</a>
+          <a href="#" class="footer-link" data-page="pricing">Pricing</a>
+          <a href="#" class="footer-link" data-page="report">New report</a>
+        </div>
+        <div class="footer-links-group">
+          <p class="footer-group-label">Account</p>
+          <a href="#" class="footer-link" data-page="signin">Sign in</a>
+          <a href="#" class="footer-link" data-page="signin">Sign up</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2026 RepairLensAI. All rights reserved.</p>
+      </div>
+    </footer>
+  </div>
+
+  <!-- PAGE: PRICING -->
+  <div id="page-pricing" class="page" style="display:none;">
+    <div class="page-content">
+      <div class="section-inner pricing-wrapper">
+        <h2 class="pricing-title">Pay per report, or keep a plan running</h2>
+        <p class="pricing-subtitle">No hidden charges. Every plan includes the same estimation engine &mdash; you&rsquo;re only choosing how many reports you need a month.</p>
+
+        <div class="pricing-table">
+          <div class="pricing-row">
+            <div class="pricing-info">
+              <div class="plan-name">Single report</div>
+              <div class="plan-desc">No sign-up commitment, buy as you go</div>
+            </div>
+            <div class="pricing-qty">1 report</div>
+            <div class="pricing-cost"><span class="price-big">&#8377;29</span><span class="price-per">/report</span></div>
+            <div class="pricing-action">
+              <button class="btn btn-outline-dark razorpay-btn" id="buy-single" data-plan="Single Report" data-price="29">Pay &#8377;29 with Razorpay</button>
+            </div>
+          </div>
+
+          <div class="pricing-row">
+            <div class="pricing-info">
+              <div class="plan-name">Starter</div>
+              <div class="plan-desc">For occasional checks</div>
+            </div>
+            <div class="pricing-qty">25 reports / month</div>
+            <div class="pricing-cost"><span class="price-big">&#8377;599</span><span class="price-per">/month</span></div>
+            <div class="pricing-action">
+              <button class="btn btn-outline-dark razorpay-btn" id="sub-starter" data-plan="Starter Plan (25 Reports/mo)" data-price="599">Subscribe &#8377;599</button>
+            </div>
+          </div>
+
+          <div class="pricing-row pricing-row-featured">
+            <div class="pricing-info">
+              <div class="plan-name">Standard</div>
+              <div class="plan-desc">For workshops &amp; small dealers</div>
+              <span class="most-picked">Most picked</span>
+            </div>
+            <div class="pricing-qty">50 reports / month</div>
+            <div class="pricing-cost"><span class="price-big">&#8377;999</span><span class="price-per">/month</span></div>
+            <div class="pricing-action">
+              <button class="btn btn-orange razorpay-btn" id="sub-standard" data-plan="Standard Plan (50 Reports/mo)" data-price="999">Subscribe &#8377;999</button>
+            </div>
+          </div>
+
+          <div class="pricing-row">
+            <div class="pricing-info">
+              <div class="plan-name">Pro</div>
+              <div class="plan-desc">For high-volume assessors</div>
+            </div>
+            <div class="pricing-qty">100 reports / month</div>
+            <div class="pricing-cost"><span class="price-big">&#8377;1,799</span><span class="price-per">/month</span></div>
+            <div class="pricing-action">
+              <button class="btn btn-outline-dark razorpay-btn" id="sub-pro" data-plan="Pro Plan (100 Reports/mo)" data-price="1799">Subscribe &#8377;1,799</button>
+            </div>
+          </div>
+
+          <div class="pricing-row">
+            <div class="pricing-info">
+              <div class="plan-name">Enterprise</div>
+              <div class="plan-desc">Fleet operators &amp; insurers</div>
+            </div>
+            <div class="pricing-qty">Unlimited</div>
+            <div class="pricing-cost"><span class="price-big">Custom</span></div>
+            <div class="pricing-action">
+              <button class="btn btn-outline-dark" id="contact-us" onclick="alert('For enterprise inquiries, please contact: piyush.gupta@repairlens.ai')">Contact us</button>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: 32px; padding: 16px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width:36px; height:36px; background:#0C2340; border-radius:8px; display:flex; align-items:center; justify-content:center;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M7 17L12 7H17L12 17H7Z" fill="#00C9A7"/></svg>
+            </div>
+            <div>
+              <div style="font-weight: 700; font-size: 14px; color: #1e293b;">Verified Razorpay Payments</div>
+              <div style="font-size: 12px; color: #64748b;">Merchant: <strong>PIYUSH GUPTA</strong> &nbsp;&bull;&nbsp; MID: <code>RMCL2XxhTCiDHJ</code></div>
+            </div>
+          </div>
+          <div style="font-size: 12px; color: #22c55e; font-weight: 600; background: #f0fdf4; padding: 6px 12px; border-radius: 20px; border: 1px solid #bbf7d0;">
+            ✓ 256-bit Encrypted Checkout
           </div>
         </div>
       </div>
     </div>
-  </section>
+  </div>
 
-  <!-- PROCESS -->
-  <section class="process-section" id="process">
-    <div class="section-inner process-inner">
-      <div class="process-left">
-        <p class="section-eyebrow">PROCESS</p>
-        <h2 class="section-title">Three steps to your <span class="accent-text">estimate</span></h2>
-        <p class="section-desc">No account needed, no waiting. Just enter your details and the AI does the rest.</p>
-      </div>
-      <div class="process-cards" id="process-cards">
-        <div class="process-card" id="process-card-1">
-          <span class="card-num">01</span>
-          <h3 class="card-title">Enter details</h3>
-          <p class="card-desc">Make, model, year, mileage, condition, and location.</p>
+  <!-- PAGE: SIGN IN -->
+  <div id="page-signin" class="page" style="display:none;">
+    <div class="page-content auth-page">
+      <div class="auth-card">
+        <div class="auth-tabs">
+          <button class="auth-tab active" id="tab-signin-btn">Sign in</button>
+          <button class="auth-tab" id="tab-signup-btn">Sign up</button>
+          <button class="auth-tab" id="tab-reset-btn">Reset password</button>
         </div>
-        <div class="process-card" id="process-card-2">
-          <span class="card-num">02</span>
-          <h3 class="card-title">AI processes</h3>
-          <p class="card-desc">Cross-references 2.3M listings across your region.</p>
+
+        <div id="panel-signin" class="auth-panel active">
+          <div class="form-group-auth">
+            <label for="signin-email">Email</label>
+            <input type="email" id="signin-email" class="auth-input" placeholder="you@example.com" />
+          </div>
+          <div class="form-group-auth">
+            <label for="signin-password">Password</label>
+            <input type="password" id="signin-password" class="auth-input" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;" />
+          </div>
+          <button class="btn btn-orange btn-full-auth" id="signin-submit">Sign in</button>
+          <p class="auth-foot">Forgot it? <a href="#" id="go-reset" class="auth-link">Reset password</a></p>
         </div>
-        <div class="process-card" id="process-card-3">
-          <span class="card-num">03</span>
-          <h3 class="card-title">Get estimate</h3>
-          <p class="card-desc">Accurate valuation with price range and market context.</p>
+
+        <div id="panel-signup" class="auth-panel" style="display:none;">
+          <div class="form-group-auth">
+            <label for="signup-email">Email</label>
+            <input type="email" id="signup-email" class="auth-input" placeholder="you@example.com" />
+          </div>
+          <div class="form-group-auth">
+            <label for="signup-password">Password</label>
+            <input type="password" id="signup-password" class="auth-input" placeholder="Choose a strong password" />
+          </div>
+          <button class="btn btn-orange btn-full-auth" id="signup-submit">Create account</button>
+        </div>
+
+        <div id="panel-reset" class="auth-panel" style="display:none;">
+          <div class="form-group-auth">
+            <label for="reset-email">Email</label>
+            <input type="email" id="reset-email" class="auth-input" placeholder="you@example.com" />
+          </div>
+          <button class="btn btn-orange btn-full-auth" id="reset-submit">Send reset link</button>
         </div>
       </div>
     </div>
-  </section>
+  </div>
 
-  <!-- PREDICT FORM -->
-  <section class="predict-section" id="predict">
-    <div class="section-inner">
-      <div class="predict-header">
-        <p class="section-eyebrow">GET YOUR ESTIMATE</p>
-        <h2 class="section-title">Upload or capture your car</h2>
-        <p class="section-desc">Upload a photo or use your camera — our AI will detect damage and return an accurate valuation instantly.</p>
-      </div>
-      <div class="predict-form-card" id="predict-form-card">
-        <form class="predict-form" id="predict-form" novalidate>
-          <div class="form-row">
-            <div class="form-group">
-              <label for="car-brand">Car Brand</label>
-              <select id="car-brand" name="car_brand" class="form-select" required></select>
-            </div>
-            <div class="form-group">
-              <label for="car-model">Car Model</label>
-              <select id="car-model" name="car_model" class="form-select" required></select>
-            </div>
-          </div>
+  <!-- PAGE: NEW REPORT -->
+  <div id="page-report" class="page" style="display:none;">
+    <div class="page-content">
+      <div class="section-inner report-wrapper">
+        <div class="report-header">
+          <h2 class="report-title">New damage report</h2>
+          <p class="report-subtitle">Tell us about the car, then upload or capture a photo of the damage.</p>
+        </div>
 
-          <div class="form-row">
-            <div class="form-group">
-              <label for="car-variant">Variant</label>
-              <select id="car-variant" name="car_variant" class="form-select" required>
-                <option value="Base (synthetic)">Base (synthetic)</option>
-                <option value="Mid (synthetic)">Mid (synthetic)</option>
-                <option value="Top (synthetic)">Top (synthetic)</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="car-type">Fuel / Car Type</label>
-              <select id="car-type" name="car_type" class="form-select" required>
-                <option value="Petrol">Petrol</option>
-                <option value="Diesel">Diesel</option>
-                <option value="Hybrid">Hybrid</option>
-                <option value="Electric">Electric</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label for="car-year">Manufacturing Year</label>
-              <select id="car-year" name="year" class="form-select" required></select>
-            </div>
-          </div>
-
-          <!-- Image Picker: Upload or Camera -->
-          <div class="form-group" id="fg-image">
-            <label>Car Photo</label>
-
-            <!-- Mode toggle tabs -->
-            <div class="img-picker-tabs" id="img-picker-tabs">
-              <button type="button" class="img-tab active" id="tab-upload">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                Upload Photo
-              </button>
-              <button type="button" class="img-tab" id="tab-camera">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="13" r="4" stroke="currentColor" stroke-width="2"/></svg>
-                Take Photo
-              </button>
-            </div>
-
-            <!-- Upload panel -->
-            <div class="img-panel" id="panel-upload">
-              <label class="dropzone" id="dropzone" for="car-image">
-                <div class="dropzone-icon">
-                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                </div>
-                <p class="dropzone-title">Drag &amp; drop or click to upload</p>
-                <p class="dropzone-hint">JPG, PNG, WEBP — max 10 MB</p>
-                <input type="file" id="car-image" name="images" accept="image/*" style="display:none" required />
-              </label>
-            </div>
-
-            <!-- Camera panel -->
-            <div class="img-panel" id="panel-camera" style="display:none;">
-              <div class="camera-container" id="camera-container">
-                <video id="camera-video" class="camera-video" autoplay playsinline muted></video>
-                <canvas id="camera-canvas" style="display:none;"></canvas>
-                <div class="camera-controls">
-                  <button type="button" class="btn btn-primary" id="capture-btn">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="currentColor"/></svg>
-                    Capture
-                  </button>
-                  <button type="button" class="btn btn-ghost" id="flip-camera-btn">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M1 4v6h6M23 20v-6h-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    Flip
-                  </button>
+        <div class="report-layout">
+          <div class="report-form-col">
+            <form id="predict-form" novalidate>
+              <div class="form-group-report">
+                <label for="car-brand">Car brand</label>
+                <div class="select-wrap">
+                  <select id="car-brand" name="car_brand" class="report-select" required></select>
+                  <svg class="select-arrow" width="12" height="8" viewBox="0 0 12 8"><path d="M1 1l5 5 5-5" stroke="#888" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
                 </div>
               </div>
-            </div>
 
-            <!-- Photo preview (shared) -->
-            <div class="photo-preview" id="photo-preview" style="display:none;">
-              <img id="preview-img" src="" alt="Car preview" />
-              <button type="button" class="preview-remove" id="remove-photo" title="Remove photo">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              <div class="form-group-report">
+                <label for="car-model">Model</label>
+                <div class="select-wrap">
+                  <select id="car-model" name="car_model" class="report-select" required></select>
+                  <svg class="select-arrow" width="12" height="8" viewBox="0 0 12 8"><path d="M1 1l5 5 5-5" stroke="#888" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
+                </div>
+              </div>
+
+              <div class="form-row-report">
+                <div class="form-group-report">
+                  <label for="car-year">Year</label>
+                  <div class="select-wrap">
+                    <select id="car-year" name="year" class="report-select" required></select>
+                    <svg class="select-arrow" width="12" height="8" viewBox="0 0 12 8"><path d="M1 1l5 5 5-5" stroke="#888" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
+                  </div>
+                </div>
+                <div class="form-group-report">
+                  <label for="car-type">Fuel type</label>
+                  <div class="select-wrap">
+                    <select id="car-type" name="car_type" class="report-select" required>
+                      <option value="Petrol">Petrol</option>
+                      <option value="Diesel">Diesel</option>
+                      <option value="Hybrid">Hybrid</option>
+                      <option value="Electric">Electric</option>
+                    </select>
+                    <svg class="select-arrow" width="12" height="8" viewBox="0 0 12 8"><path d="M1 1l5 5 5-5" stroke="#888" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-group-report">
+                <label for="car-variant">Variant</label>
+                <div class="select-wrap">
+                  <select id="car-variant" name="car_variant" class="report-select" required>
+                    <option value="Base (LXi / E)">Base (LXi / E)</option>
+                    <option value="Mid (VXi / V)">Mid (VXi / V)</option>
+                    <option value="Top (ZXi / Z)">Top (ZXi / Z)</option>
+                  </select>
+                  <svg class="select-arrow" width="12" height="8" viewBox="0 0 12 8"><path d="M1 1l5 5 5-5" stroke="#888" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
+                </div>
+              </div>
+
+              <div class="img-picker-tabs" id="img-picker-tabs">
+                <button type="button" class="img-tab active" id="tab-upload">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  Upload Photo
+                </button>
+                <button type="button" class="img-tab" id="tab-camera">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="13" r="4" stroke="currentColor" stroke-width="2"/></svg>
+                  Take Photo
+                </button>
+              </div>
+
+              <div class="img-panel" id="panel-upload">
+                <label class="dropzone" id="dropzone" for="car-image">
+                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="#9BA3AE" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  <p class="dropzone-title">Drag &amp; drop or click to upload</p>
+                  <p class="dropzone-hint">JPG, PNG, WEBP &mdash; max 10 MB</p>
+                  <input type="file" id="car-image" name="images" accept="image/*" style="display:none" required />
+                </label>
+              </div>
+
+              <div class="img-panel" id="panel-camera" style="display:none;">
+                <div class="camera-container" id="camera-container">
+                  <video id="camera-video" class="camera-video" autoplay playsinline muted></video>
+                  <canvas id="camera-canvas" style="display:none;"></canvas>
+                  <div class="camera-controls">
+                    <button type="button" class="btn btn-orange" id="capture-btn">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="currentColor"/></svg>
+                      Capture
+                    </button>
+                    <button type="button" class="btn btn-ghost-dark" id="flip-camera-btn">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M1 4v6h6M23 20v-6h-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                      Flip
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="photo-preview" id="photo-preview" style="display:none;">
+                <img id="preview-img" src="" alt="Car preview" />
+                <button type="button" class="preview-remove" id="remove-photo" title="Remove photo">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                </button>
+                <p class="preview-label" id="preview-label">Photo ready</p>
+              </div>
+
+              <button type="submit" class="btn btn-orange btn-full-report" id="form-submit-btn">
+                <span class="btn-text">Analyse &amp; Estimate Repair Cost</span>
+                <span class="btn-loader" style="display:none;">
+                  <svg class="spin" width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.3)" stroke-width="3"/><path d="M12 2a10 10 0 0110 10" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg>
+                  Analysing...
+                </span>
               </button>
-              <p class="preview-label" id="preview-label">Photo ready</p>
+
+              <button type="button" class="btn btn-outline-dark razorpay-btn" data-plan="Report Credit Token" data-price="29" style="margin-top:12px; width:100%; justify-content:center; gap:8px;">
+                💳 Pre-pay &#8377;29 via Razorpay
+              </button>
+            </form>
+
+            <div class="result-panel" id="result-panel" style="display:none;">
+              <div class="result-header">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#22c55e" stroke-width="2"/><path d="M8 12l3 3 5-5" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span id="analysis-message-text">Analysis complete</span>
+              </div>
+              <div id="results-container" style="display:flex;flex-direction:column;gap:32px;margin-bottom:24px;"></div>
+              <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+                <button class="btn btn-orange" id="download-pdf-btn" type="button" style="flex:1;min-width:200px;gap:8px;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 15V3m0 12l-4-4m4 4l4-4M2 17l.621 2.485A2 2 0 004.561 21h14.878a2 2 0 001.94-1.515L22 17" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  Download PDF Report
+                </button>
+                <button class="btn btn-outline-dark razorpay-btn" type="button" data-plan="Premium Valuation Upgrade" data-price="29" style="gap:8px;">
+                  💳 Support / Unlock Pro Receipt (₹29)
+                </button>
+              </div>
+              <button class="btn btn-ghost-dark btn-full-report" id="reset-btn">Analyse another car</button>
             </div>
           </div>
 
-          <button type="submit" class="btn btn-primary btn-full" id="form-submit-btn">
-            <span class="btn-text">Analyze Car & Estimate Cost</span>
-            <span class="btn-loader" style="display:none;">Analyzing...</span>
-          </button>
-        </form>
-        <div class="result-panel" id="result-panel" style="display:none;">
-          <div class="result-header">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="#22c55e" stroke-width="2"/><path d="M8 12l3 3 5-5" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            <span id="analysis-message-text">Analysis complete</span>
-          </div>
-          
-          <div id="results-container" style="display: flex; flex-direction: column; gap: 32px; margin-bottom: 24px;">
-            <!-- Galleries injected here -->
-          </div>
-          
-          <!-- Download Report Actions -->
-          <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:16px;">
-            <button class="btn btn-primary" id="download-pdf-btn" type="button" style="flex:1; min-width:200px; background:linear-gradient(135deg, #ef4444, #dc2626); border-color:#ef4444; gap:8px;">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 15V3m0 12l-4-4m4 4l4-4M2 17l.621 2.485A2 2 0 004.561 21h14.878a2 2 0 001.94-1.515L22 17" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              <span>Download PDF Report</span>
-            </button>
-          </div>
-
-          <button class="btn btn-ghost btn-full" id="reset-btn">Analyze another car</button>
-        </div>
-      </div>
-    </div>
-  </section>
-
-
-  <!-- ABOUT -->
-  <section class="about-section" id="about">
-    <div class="section-inner about-inner">
-      <div class="about-content">
-        <p class="section-eyebrow">ABOUT</p>
-        <h2 class="section-title">Built on real <span class="accent-text">transaction data</span></h2>
-        <p class="section-desc">RepairLensAI was trained on over 2.3 million verified vehicle repair & sales data across major markets. Our model updates daily, ensuring your estimate reflects the current market.</p>
-        <div class="about-features">
-          <div class="feature-item">
-            <div class="feature-dot blue"></div>
-            <span>Daily model retraining on live auction data</span>
-          </div>
-          <div class="feature-item">
-            <div class="feature-dot purple"></div>
-            <span>Region-specific pricing adjustments</span>
-          </div>
-          <div class="feature-item">
-            <div class="feature-dot green"></div>
-            <span>98.4% valuation accuracy vs. final sale price</span>
-          </div>
-        </div>
-      </div>
-      <div class="about-visual">
-        <div class="about-card">
-          <div class="about-card-header">
-            <span class="about-card-label">Model Performance</span>
-            <span class="about-card-badge">LIVE</span>
-          </div>
-          <div class="perf-row">
-            <span class="perf-key">Accuracy</span>
-            <div class="perf-bar-track"><div class="perf-bar-fill" style="width:98.4%; background: #3b82f6;"></div></div>
-            <span class="perf-val">98.4%</span>
-          </div>
-          <div class="perf-row">
-            <span class="perf-key">Coverage</span>
-            <div class="perf-bar-track"><div class="perf-bar-fill" style="width:94%; background: #8b5cf6;"></div></div>
-            <span class="perf-val">94%</span>
-          </div>
-          <div class="perf-row">
-            <span class="perf-key">Confidence</span>
-            <div class="perf-bar-track"><div class="perf-bar-fill" style="width:87%; background: #22c55e;"></div></div>
-            <span class="perf-val">87%</span>
-          </div>
-          <div class="about-card-footer">
-            <span>Last updated: just now</span>
-            <span>v4.2.1</span>
+          <div class="report-upload-col" id="report-upload-col">
+            <div class="upload-placeholder" id="upload-placeholder">
+              <svg width="80" height="100" viewBox="0 0 80 100" fill="none">
+                <path d="M40 10 L40 70" stroke="#9BA3AE" stroke-width="6" stroke-linecap="round"/>
+                <path d="M15 35 L40 10 L65 35" stroke="#9BA3AE" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M15 80 L15 90 L65 90 L65 80" stroke="#9BA3AE" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <p>Drag your photo here<br/>or use the upload button</p>
+            </div>
           </div>
         </div>
       </div>
     </div>
-  </section>
+  </div>
 
-  <!-- FOOTER -->
-  <footer class="footer" id="footer">
-    <div class="section-inner footer-inner">
-      <div class="footer-brand">
-        <a href="#" class="nav-logo">
-          <div class="logo-icon">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <path d="M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h11a2 2 0 012 2v3" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
-              <rect x="9" y="11" width="14" height="10" rx="2" stroke="#fff" stroke-width="2"/>
-            </svg>
-          </div>
-          <span class="logo-text">RepairLens</span>
-          <span class="logo-badge">AI</span>
-        </a>
-        <p class="footer-tagline">AI-powered car damage assessment & valuation for the modern market.</p>
+  <!-- PAYMENT CHECKOUT & COUPON MODAL -->
+  <div id="checkout-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.75); z-index:9998; align-items:center; justify-content:center; backdrop-filter:blur(6px);">
+    <div style="background:#ffffff; border-radius:20px; max-width:480px; width:92%; padding:28px; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); position:relative;">
+      <button id="close-checkout-modal" style="position:absolute; top:18px; right:18px; background:none; border:none; font-size:20px; cursor:pointer; color:#64748b;">✕</button>
+      
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px;">
+        <div style="width:42px; height:42px; background:#fff7ed; border:1px solid #ffedd5; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:22px;">💳</div>
+        <div>
+          <h3 style="font-size:18px; font-weight:800; color:#0f172a; margin:0;">Razorpay Payment Checkout</h3>
+          <p style="font-size:12px; color:#64748b; margin:0;">Merchant: <strong>PIYUSH GUPTA</strong> &nbsp;&bull;&nbsp; MID: <code>RMCL2XxhTCiDHJ</code></p>
+        </div>
       </div>
-      <div class="footer-links-group">
-        <p class="footer-group-label">Product</p>
-        <a href="#hero" class="footer-link">Home</a>
-        <a href="#predict" class="footer-link">Get estimate</a>
-        <a href="#dashboard" class="footer-link">Dashboard</a>
+
+      <!-- Price Estimate Disclaimer Banner -->
+      <div style="background:#fffbebf0; border:1px solid #fef08a; border-radius:10px; padding:10px 14px; margin-bottom:18px; font-size:12px; color:#854d0e; display:flex; align-items:center; gap:8px;">
+        <span>⚠️</span>
+        <div><strong>Notice:</strong> This is estimate Price not fixed It Vary 15-20%.</div>
       </div>
-      <div class="footer-links-group">
-        <p class="footer-group-label">Company</p>
-        <a href="#about" class="footer-link">About</a>
-        <a href="#process" class="footer-link">How it works</a>
+
+      <!-- Plan Summary Card -->
+      <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px; margin-bottom:18px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <span style="font-size:13px; color:#64748b; font-weight:600;">Selected Plan:</span>
+          <strong id="modal-plan-name" style="font-size:14px; color:#0f172a;">-</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <span style="font-size:13px; color:#64748b;">Original Price:</span>
+          <span id="modal-orig-price" style="font-size:14px; font-weight:700; color:#334155;">₹0</span>
+        </div>
+        <div id="modal-discount-row" style="display:none; justify-content:space-between; align-items:center; margin-bottom:4px; color:#16a34a;">
+          <span style="font-size:13px;">Coupon Discount:</span>
+          <span id="modal-discount-val" style="font-size:14px; font-weight:700;">-₹0</span>
+        </div>
+        <div style="border-top:1px dashed #cbd5e1; margin-top:8px; padding-top:8px; display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-size:14px; font-weight:800; color:#0f172a;">Total Payable:</span>
+          <span id="modal-final-price" style="font-size:22px; font-weight:900; color:#e8622a;">₹0</span>
+        </div>
+      </div>
+
+      <!-- Coupon Input Section -->
+      <div style="margin-bottom:20px;">
+        <label style="font-size:12px; font-weight:700; color:#334155; text-transform:uppercase; letter-spacing:0.04em; display:block; margin-bottom:6px;">Have a Coupon Code?</label>
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="coupon-code-input" placeholder="e.g. FIRST50, REPAIR10, CAR20" style="flex:1; padding:10px 14px; border:1px solid #cbd5e1; border-radius:10px; font-size:13px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em;" />
+          <button id="apply-coupon-btn" type="button" class="btn btn-outline-dark" style="padding:10px 18px; font-size:13px; font-weight:700;">Apply</button>
+        </div>
+        <div id="coupon-msg" style="font-size:12px; margin-top:6px; display:none;"></div>
+        
+        <!-- Quick Coupon Tags -->
+        <div style="margin-top:10px; display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+          <span style="font-size:11px; color:#64748b; font-weight:600;">Try:</span>
+          <button type="button" class="quick-coupon-tag" data-code="FIRST50" style="font-size:11px; padding:3px 8px; border-radius:12px; background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; font-weight:700; cursor:pointer;">FIRST50 (50% OFF)</button>
+          <button type="button" class="quick-coupon-tag" data-code="REPAIR10" style="font-size:11px; padding:3px 8px; border-radius:12px; background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; font-weight:700; cursor:pointer;">REPAIR10 (10% OFF)</button>
+          <button type="button" class="quick-coupon-tag" data-code="CAR20" style="font-size:11px; padding:3px 8px; border-radius:12px; background:#fdf2f8; color:#db2777; border:1px solid #fbcfe8; font-weight:700; cursor:pointer;">CAR20 (20% OFF)</button>
+        </div>
+      </div>
+
+      <button id="proceed-razorpay-btn" type="button" class="btn btn-orange" style="width:100%; justify-content:center; padding:14px; font-size:15px; font-weight:800; border-radius:12px; gap:8px;">
+        <span>Pay via Razorpay &rarr;</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- RAZORPAY PAYMENT SUCCESS MODAL -->
+  <div id="razorpay-success-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:9999; align-items:center; justify-content:center; backdrop-filter:blur(4px);">
+    <div style="background:#ffffff; border-radius:16px; max-width:480px; width:90%; padding:32px; box-shadow:0 20px 40px rgba(0,0,0,0.2); position:relative; text-align:center;">
+      <div style="width:64px; height:64px; background:#dcfce7; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 20px auto;">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" fill="#22c55e"/><path d="M8 12l3 3 5-5" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <h3 style="font-size:22px; font-weight:800; color:#0f172a; margin-bottom:8px;">Payment Successful!</h3>
+      <p style="font-size:14px; color:#64748b; margin-bottom:24px;">Thank you! Your payment via Razorpay has been processed.</p>
+      
+      <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px; text-align:left; font-size:13px; margin-bottom:24px; display:flex; flex-direction:column; gap:10px;">
+        <div style="display:flex; justify-content:space-between;"><span style="color:#64748b;">Plan:</span><strong id="rzp-receipt-plan" style="color:#0f172a;">-</strong></div>
+        <div style="display:flex; justify-content:space-between;"><span style="color:#64748b;">Amount Paid:</span><strong id="rzp-receipt-amount" style="color:#16a34a;">-</strong></div>
+        <div style="display:flex; justify-content:space-between;"><span style="color:#64748b;">Merchant Name:</span><strong style="color:#0f172a;">PIYUSH GUPTA</strong></div>
+        <div style="display:flex; justify-content:space-between;"><span style="color:#64748b;">Merchant MID:</span><code style="color:#0f172a;">RMCL2XxhTCiDHJ</code></div>
+        <div style="display:flex; justify-content:space-between;"><span style="color:#64748b;">Order ID:</span><span id="rzp-receipt-order" style="font-family:monospace; color:#334155;">-</span></div>
+        <div style="display:flex; justify-content:space-between;"><span style="color:#64748b;">Payment ID:</span><span id="rzp-receipt-payment" style="font-family:monospace; color:#334155;">-</span></div>
+      </div>
+
+      <div style="display:flex; gap:12px;">
+        <button class="btn btn-orange" id="rzp-close-modal-btn" style="flex:1;">Continue to App</button>
       </div>
     </div>
-    <div class="footer-bottom">
-      <p>© 2026 RepairLensAI. All rights reserved.</p>
-    </div>
-  </footer>
+  </div>
 
-  <script src="app.js?v=10008"></script>
+  <!-- RAZORPAY SDK -->
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <script src="app.js?v=20002"></script>
 </body>
 </html>
 

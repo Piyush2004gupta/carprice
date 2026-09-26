@@ -9,3 +9,4 @@ torch
 torchvision
 ultralytics
 tensorflow-cpu
+razorpay
