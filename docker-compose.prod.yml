@@ -1,22 +1,22 @@
 version: '3.8'
 
 services:
-  backend:
+  carbackend:
     image: 231324680416.dkr.ecr.ap-south-1.amazonaws.com/carbackend:latest
     container_name: carbackend
     ports:
-      - "8000:8000"
+      - "8001:8000"
     restart: always
     networks:
       - carprice-net
 
-  frontend:
+  carfrontend:
     image: 231324680416.dkr.ecr.ap-south-1.amazonaws.com/carfrontend:latest
     container_name: carfrontend
     ports:
       - "80:3000"
     depends_on:
-      - backend
+      - carbackend
     restart: always
     networks:
       - carprice-net
