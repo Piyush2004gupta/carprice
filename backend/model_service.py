@@ -294,17 +294,34 @@ class ModelService:
     def _load_keras_model_safe(self, model_path):
         import zipfile
         import tempfile
+        import json
+
+        def remove_quant_keys(obj):
+            if isinstance(obj, dict):
+                obj.pop("quantization_config", None)
+                for k, v in list(obj.items()):
+                    remove_quant_keys(v)
+            elif isinstance(obj, list):
+                for item in obj:
+                    remove_quant_keys(item)
+
         try:
             return tf.keras.models.load_model(model_path, compile=False)
-        except Exception:
+        except Exception as e:
+            logging.warning(f"Standard keras load failed ({e}), attempting config sanitization...")
             temp_dir = tempfile.mkdtemp()
             clean_path = os.path.join(temp_dir, "price_clean.keras")
             with zipfile.ZipFile(model_path, 'r') as zin, zipfile.ZipFile(clean_path, 'w') as zout:
                 for item in zin.infolist():
                     data = zin.read(item.filename)
                     if item.filename == 'config.json':
-                        s = data.decode('utf-8').replace('"quantization_config": null', '"quantization_config_ignored": null')
-                        data = s.encode('utf-8')
+                        try:
+                            cfg = json.loads(data.decode('utf-8'))
+                            remove_quant_keys(cfg)
+                            data = json.dumps(cfg).encode('utf-8')
+                        except Exception:
+                            s = data.decode('utf-8').replace('"quantization_config": null', '').replace('"quantization_config":null', '')
+                            data = s.encode('utf-8')
                     zout.writestr(item, data)
             return tf.keras.models.load_model(clean_path, compile=False)
 
