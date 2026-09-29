@@ -1,4 +1,4 @@
-// RepairLensAI — app.js  v6.0
+// RepairLensAI — app.js v9.0 (Direct Database Auth)
 
 // ── Dataset Constants & Mappings ──────────────────────────
 const BRANDS_LIST = [
@@ -37,10 +37,416 @@ const BRAND_MODELS_MAP = {
 };
 
 // ── SPA Page Router ───────────────────────────────────────
-const PAGES = ['home', 'pricing', 'signin', 'report'];
+const PAGES = ['home', 'signin', 'report'];
+const AUTH_STORAGE_KEY = 'repairlens_auth_user';
+
+function getStoredUser() {
+  try {
+    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+    const session = raw ? JSON.parse(raw) : null;
+    return session && session.token ? session.user : null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function getAuthSession() {
+  try {
+    return JSON.parse(localStorage.getItem(AUTH_STORAGE_KEY) || 'null');
+  } catch (error) {
+    return null;
+  }
+}
+
+function setStoredUser(session) {
+  if (!session) {
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+    return;
+  }
+  localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
+}
+
+async function apiRequest(path, options = {}) {
+  const headers = new Headers(options.headers || {});
+  const session = getAuthSession();
+  if (session && session.token) headers.set('Authorization', `Bearer ${session.token}`);
+  const response = await fetch(`${getApiBaseUrl()}${path}`, { ...options, headers });
+  const contentType = response.headers.get('content-type') || '';
+  let data = {};
+  if (contentType.includes('application/json')) {
+    data = await response.json().catch(() => ({}));
+  } else {
+    const rawText = await response.text().catch(() => '');
+    if (!response.ok) {
+      throw new Error(`Server error (${response.status}): ${rawText.slice(0, 100) || 'Non-JSON response'}`);
+    }
+  }
+  if (!response.ok) throw new Error(data.detail || `Request failed (${response.status}).`);
+  return data;
+}
+
+async function refreshCurrentUser() {
+  const session = getAuthSession();
+  if (!session) return null;
+  try {
+    const user = await apiRequest('/api/auth/me');
+    const updated = { ...session, user };
+    setStoredUser(updated);
+    renderAuthState();
+    return user;
+  } catch (error) {
+    setStoredUser(null);
+    renderAuthState();
+    return null;
+  }
+}
+
+function userLogout() {
+  setStoredUser(null);
+  renderAuthState();
+  if (typeof navigateTo === 'function') navigateTo('home');
+}
+
+function renderAuthState() {
+  const user = getStoredUser();
+  const badge = document.getElementById('nav-user-badge');
+  const logoutBtn = document.getElementById('logout-btn');
+  const navSignin = document.getElementById('nav-signin');
+  const heroSignin = document.getElementById('hero-signin');
+
+  const isLoggedIn = !!(user && user.email);
+
+  if (badge) {
+    if (isLoggedIn) {
+      const displayName = user.name || user.email.split('@')[0];
+      badge.innerHTML = `<span class="user-dot"></span>${displayName}`;
+      badge.style.display = 'inline-flex';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+
+  // Show/hide Sign out button
+  if (logoutBtn) {
+    logoutBtn.style.display = isLoggedIn ? 'inline-flex' : 'none';
+  }
+
+  // Hide 'Sign in' nav link when logged in
+  if (navSignin) {
+    const parentLi = navSignin.closest('li');
+    if (parentLi) {
+      parentLi.style.display = isLoggedIn ? 'none' : '';
+    }
+  }
+
+  // Show/hide 'My History' nav link when logged in
+  const navHistoryLi = document.getElementById('nav-history-li');
+  if (navHistoryLi) {
+    navHistoryLi.style.display = isLoggedIn ? '' : 'none';
+  }
+
+  // Hide hero 'Sign in / Sign up' button when logged in
+  if (heroSignin) {
+    heroSignin.style.display = isLoggedIn ? 'none' : '';
+  }
+}
+
+async function openDashboardModal() {
+  const user = getStoredUser();
+  if (!user) return;
+  const modal = document.getElementById('dashboard-modal');
+  const userInfo = document.getElementById('dashboard-user-info');
+  const historyList = document.getElementById('dashboard-history-list');
+  if (!modal) return;
+
+  modal.style.display = 'flex';
+
+  if (userInfo) {
+    userInfo.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <div>
+          <h4 style="font-size:16px; font-weight:700; color:#0f172a; margin:0;">${user.name || 'User Account'}</h4>
+          <p style="font-size:13px; color:#64748b; margin:2px 0 0 0;">${user.email}${user.phone ? ' &bull; ' + user.phone : ''}</p>
+        </div>
+      </div>
+    `;
+  }
+
+  if (historyList) {
+    historyList.innerHTML = `<p style="color:#64748b; font-size:13px; text-align:center; padding:20px;">⏳ Loading your predictions...</p>`;
+    try {
+      const data = await apiRequest('/api/user/predictions');
+      if (!data || data.length === 0) {
+        historyList.innerHTML = `<div style="text-align:center; padding:32px; color:#94a3b8; font-size:13px; background:#f8fafc; border-radius:10px;">📋 No saved predictions found yet. Upload a car photo to get your first report!</div>`;
+        return;
+      }
+      window._historyData = data;
+      historyList.innerHTML = '';
+      data.forEach((item, idx) => {
+        const detections = item.detections || [];
+        const cp = item.combined_price || {};
+        const fmtN = n => Number(n || 0).toLocaleString('en-IN');
+
+        const detBadges = detections.map(d => `
+          <span style="font-size:10px; padding:3px 9px; border-radius:20px; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; font-weight:700; text-transform:capitalize;">${d.damage_type} — ${d.car_part}</span>
+        `).join('');
+
+        const priceRow = (cp.oem_total_estimate || cp.aftermarket_total_estimate) ? `
+          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+            <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:6px 12px; text-align:center;">
+              <div style="font-size:9px; font-weight:700; color:#1d4ed8; text-transform:uppercase;">OEM Total</div>
+              <div style="font-size:14px; font-weight:900; color:#1d4ed8;">₹${fmtN(cp.oem_total_estimate)}</div>
+            </div>
+            <div style="background:#f0fdf4; border:1px solid #86efac; border-radius:8px; padding:6px 12px; text-align:center;">
+              <div style="font-size:9px; font-weight:700; color:#16a34a; text-transform:uppercase;">Aftermarket</div>
+              <div style="font-size:14px; font-weight:900; color:#15803d;">₹${fmtN(cp.aftermarket_total_estimate)}</div>
+            </div>
+          </div>` : (item.estimated_price ? `
+          <div style="font-size:15px; font-weight:800; color:#ff7a1a; margin-top:8px;">Est: ₹${fmtN(item.estimated_price)}</div>` : '');
+
+        const card = document.createElement('div');
+        card.style.cssText = 'border:1px solid #e2e8f0; border-radius:14px; padding:16px; background:#fff; box-shadow:0 1px 4px rgba(0,0,0,0.06); display:flex; flex-direction:column; gap:10px;';
+        card.innerHTML = `
+          <!-- Header Row -->
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">
+            <div style="flex:1;">
+              <div style="font-size:15px; font-weight:800; color:#0f172a;">${item.car_brand || ''} ${item.car_model || ''} ${item.year ? '(' + item.year + ')' : ''}</div>
+              <div style="font-size:12px; color:#64748b; margin-top:2px;">Variant: ${item.car_variant || 'N/A'} &nbsp;|&nbsp; Fuel: ${item.car_type || 'N/A'}</div>
+              <div style="font-size:11px; color:#94a3b8; margin-top:2px;">${new Date(item.created_at).toLocaleString('en-IN')}</div>
+            </div>
+            <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
+              <span style="font-size:10px; padding:3px 10px; border-radius:20px; background:${detections.length > 0 ? '#fef2f2' : '#f0fdf4'}; color:${detections.length > 0 ? '#dc2626' : '#166534'}; font-weight:800; border:1px solid ${detections.length > 0 ? '#fecaca' : '#bbf7d0'}; white-space:nowrap;">
+                ${detections.length > 0 ? '⚠ ' + detections.length + ' Damage' + (detections.length !== 1 ? 's' : '') : '✓ No Damage'}
+              </span>
+              <button onclick="downloadHistoryReport(${idx})" style="font-size:11px; font-weight:700; color:#fff; background:linear-gradient(135deg,#2563eb,#1d4ed8); border:none; border-radius:8px; padding:6px 14px; cursor:pointer; white-space:nowrap;">⬇ Download</button>
+            </div>
+          </div>
+
+          <!-- AI Damage Message -->
+          ${item.damage_message ? `<div style="font-size:12px; color:#475569; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:8px 12px; line-height:1.5;">${item.damage_message}</div>` : ''}
+
+          <!-- Damage Badges -->
+          ${detBadges ? `<div style="display:flex; flex-wrap:wrap; gap:5px;">${detBadges}</div>` : ''}
+
+          <!-- Price Cards -->
+          ${priceRow}
+
+          <!-- Images + Links -->
+          <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:2px;">
+            ${item.s3_url ? `<a href="${item.s3_url}" target="_blank" style="font-size:11px; font-weight:600; color:#2563eb; text-decoration:none; padding:4px 10px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:6px;">📷 Original Photo</a>` : ''}
+            ${item.s3_predicted_url ? `<a href="${item.s3_predicted_url}" target="_blank" style="font-size:11px; font-weight:600; color:#16a34a; text-decoration:none; padding:4px 10px; background:#f0fdf4; border:1px solid #86efac; border-radius:6px;">🎯 AI Analyzed Image</a>` : ''}
+          </div>
+        `;
+        historyList.appendChild(card);
+      });
+    } catch (err) {
+      historyList.innerHTML = `<p style="color:#ef4444; font-size:13px; padding:16px;">❌ Failed to load history: ${err.message}</p>`;
+    }
+  }
+}
+
+// ── Download History Report ───────────────────────────────
+function downloadHistoryReport(idx) {
+  const data = window._historyData;
+  if (!data || !data[idx]) { alert('Report data not available.'); return; }
+  const item = data[idx];
+  const user = getStoredUser();
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
+  const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+  const fmtN = n => Number(n || 0).toLocaleString('en-IN');
+  const detections = item.detections || [];
+  const cp = item.combined_price || {};
+
+  // Images from S3
+  const origImgHTML = item.s3_url
+    ? `<div style="flex:1;text-align:center;"><div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:6px;">Original Photo</div><img src="${item.s3_url}" style="width:100%;max-width:350px;border-radius:8px;border:2px solid #e2e8f0;" /></div>`
+    : '';
+  const aiImgHTML = item.s3_predicted_url
+    ? `<div style="flex:1;text-align:center;"><div style="font-size:11px;font-weight:700;color:#3b82f6;text-transform:uppercase;margin-bottom:6px;">AI Analyzed Result</div><img src="${item.s3_predicted_url}" style="width:100%;max-width:350px;border-radius:8px;border:2px solid #3b82f6;" /></div>`
+    : '';
+
+  // Damage rows
+  const dmgRows = detections.map((d, i) => `
+    <tr style="background:${i%2===0?'#f8fafc':'#fff'}">
+      <td style="padding:8px 12px;border:1px solid #e2e8f0;font-weight:600;text-transform:capitalize;">${d.damage_type || ''}</td>
+      <td style="padding:8px 12px;border:1px solid #e2e8f0;">${d.car_part || ''}</td>
+      <td style="padding:8px 12px;border:1px solid #e2e8f0;">${d.confidence || ''}%</td>
+      <td style="padding:8px 12px;border:1px solid #e2e8f0;">${d.model_type || ''}</td>
+    </tr>`).join('');
+
+  // Price breakdown rows
+  const priceRows = [
+    ['OEM Parts Price',         cp.total_oem_part_price],
+    ['Aftermarket Parts Price', cp.total_aftermarket_part_price],
+    ['Labour Charges',          cp.total_damage_labour],
+    ['Installation Charges',    cp.total_damage_installation],
+    ['Paint Cost',              cp.total_damage_paint],
+  ].filter(r => (r[1] || 0) > 0).map(([l, v], i) => `
+    <tr style="background:${i%2===0?'#f8fafc':'#fff'}">
+      <td style="padding:8px 12px;border:1px solid #e2e8f0;">${l}</td>
+      <td style="padding:8px 12px;border:1px solid #e2e8f0;text-align:right;font-weight:700;">₹${fmtN(v)}</td>
+    </tr>`).join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>RepairLensAI — Damage Report</title>
+  <style>
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:Arial,sans-serif; color:#1e293b; background:#fff; padding:32px; font-size:13px; }
+    @media print { body { padding:16px; } img { max-width:100% !important; } }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px;padding-bottom:20px;border-bottom:3px solid #3b82f6;">
+    <div>
+      <div style="font-size:22px;font-weight:900;color:#0f172a;">🔍 RepairLens <span style="color:#3b82f6;">AI</span></div>
+      <div style="font-size:12px;color:#64748b;margin-top:4px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Car Damage Detection &amp; Repair Cost Estimation Report</div>
+    </div>
+    <div style="text-align:right;">
+      <div style="font-size:12px;color:#64748b;">Generated on</div>
+      <div style="font-size:13px;font-weight:700;">${dateStr} at ${timeStr}</div>
+      <div style="font-size:11px;color:#94a3b8;margin-top:2px;">Report ID: RL-${item.prediction_id || Date.now()}</div>
+    </div>
+  </div>
+
+  <!-- Vehicle & User Details -->
+  <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px 20px;margin-bottom:24px;">
+    <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:12px;">Vehicle &amp; Owner Details</div>
+    <div style="display:flex;flex-wrap:wrap;gap:16px 32px;">
+      ${[['Owner', user ? (user.name || user.email) : (item.user_name || '-')],
+         ['Email', user ? user.email : '-'],
+         ['Phone', user ? (user.phone || '-') : (item.user_phone || '-')],
+         ['Brand', item.car_brand],
+         ['Model', item.car_model],
+         ['Variant', item.car_variant],
+         ['Fuel Type', item.car_type],
+         ['Year', item.year],
+         ['File', item.filename],
+         ['Analyzed On', new Date(item.created_at).toLocaleString('en-IN')],
+        ].map(([k,v]) => `<div><span style="font-size:11px;color:#94a3b8;display:block;">${k}</span><span style="font-size:13px;font-weight:700;color:#0f172a;">${v||'-'}</span></div>`).join('')}
+    </div>
+  </div>
+
+  <!-- Images -->
+  ${origImgHTML || aiImgHTML ? `<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:24px;">${origImgHTML}${aiImgHTML}</div>` : ''}
+
+  <!-- AI Assessment Summary -->
+  <div style="margin-bottom:24px;">
+    <h3 style="font-size:14px;font-weight:800;color:#1e293b;margin:0 0 8px;padding-bottom:6px;border-bottom:2px solid #e2e8f0;">🔍 AI Damage Assessment</h3>
+    <p style="font-size:13px;color:#475569;line-height:1.6;">${item.damage_message || 'No assessment available.'}</p>
+  </div>
+
+  <!-- Detections Table -->
+  ${detections.length > 0 ? `
+  <div style="margin-bottom:24px;">
+    <h3 style="font-size:14px;font-weight:800;color:#1e293b;margin:0 0 10px;padding-bottom:6px;border-bottom:2px solid #e2e8f0;">⚠ Detected Damages (${detections.length})</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead>
+        <tr style="background:#1e293b;color:#fff;">
+          <th style="padding:9px 12px;border:1px solid #334155;text-align:left;">Damage Type</th>
+          <th style="padding:9px 12px;border:1px solid #334155;text-align:left;">Car Part</th>
+          <th style="padding:9px 12px;border:1px solid #334155;text-align:left;">Confidence</th>
+          <th style="padding:9px 12px;border:1px solid #334155;text-align:left;">Model</th>
+        </tr>
+      </thead>
+      <tbody>${dmgRows}</tbody>
+    </table>
+  </div>` : `
+  <div style="padding:16px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;color:#16a34a;font-weight:700;margin-bottom:24px;">✅ No damage detected — vehicle appears to be in good condition.</div>`}
+
+  <!-- Price Estimate -->
+  ${(cp.oem_total_estimate || cp.aftermarket_total_estimate) ? `
+  <div style="margin-bottom:24px;">
+    <h3 style="font-size:14px;font-weight:800;color:#1e293b;margin:0 0 14px;padding-bottom:6px;border-bottom:2px solid #3b82f6;">💰 Repair Cost Estimate</h3>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:16px;">
+      <div style="flex:1;min-width:180px;background:linear-gradient(135deg,#eff6ff,#dbeafe);border:2px solid #3b82f6;border-radius:12px;padding:14px;text-align:center;">
+        <div style="font-size:10px;font-weight:700;color:#1d4ed8;text-transform:uppercase;margin-bottom:4px;">OEM Total Estimate</div>
+        <div style="font-size:26px;font-weight:900;color:#1d4ed8;">₹${fmtN(cp.oem_total_estimate)}</div>
+        <div style="font-size:11px;color:#64748b;margin-top:3px;">Subtotal ₹${fmtN(cp.oem_subtotal_before_gst)} + GST ₹${fmtN(cp.oem_gst_amount)}</div>
+      </div>
+      <div style="flex:1;min-width:180px;background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:2px solid #22c55e;border-radius:12px;padding:14px;text-align:center;">
+        <div style="font-size:10px;font-weight:700;color:#16a34a;text-transform:uppercase;margin-bottom:4px;">Aftermarket Total</div>
+        <div style="font-size:26px;font-weight:900;color:#15803d;">₹${fmtN(cp.aftermarket_total_estimate)}</div>
+        <div style="font-size:11px;color:#64748b;margin-top:3px;">Subtotal ₹${fmtN(cp.aftermarket_subtotal_before_gst)} + GST ₹${fmtN(cp.aftermarket_gst_amount)}</div>
+      </div>
+    </div>
+    ${priceRows ? `<table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead><tr style="background:#f1f5f9;"><th style="padding:8px 12px;border:1px solid #e2e8f0;text-align:left;color:#475569;">Cost Component</th><th style="padding:8px 12px;border:1px solid #e2e8f0;text-align:right;color:#475569;">Amount (₹)</th></tr></thead>
+      <tbody>${priceRows}</tbody>
+    </table>` : ''}
+  </div>` : (item.estimated_price ? `
+  <div style="background:linear-gradient(135deg,#eff6ff,#dbeafe);border:2px solid #3b82f6;border-radius:12px;padding:16px;text-align:center;margin-bottom:24px;">
+    <div style="font-size:11px;font-weight:700;color:#1d4ed8;text-transform:uppercase;">Estimated Repair Cost</div>
+    <div style="font-size:28px;font-weight:900;color:#1d4ed8;">₹${fmtN(item.estimated_price)}</div>
+  </div>` : '')}
+
+  <!-- Footer -->
+  <div style="margin-top:32px;padding-top:14px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;font-size:11px;color:#94a3b8;">
+    <span>RepairLensAI — AI-Powered Car Damage &amp; Valuation Platform</span>
+    <span>Report ID: RL-${item.prediction_id || Date.now()}</span>
+  </div>
+</body>
+</html>`;
+
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;border:none;';
+  document.body.appendChild(iframe);
+  iframe.contentDocument.open();
+  iframe.contentDocument.write(html);
+  iframe.contentDocument.close();
+  setTimeout(() => {
+    iframe.contentWindow.focus();
+    iframe.contentWindow.print();
+    setTimeout(() => document.body.removeChild(iframe), 2000);
+  }, 800);
+}
+
+function getApiBaseUrl() {
+  const currentOrigin = window.location.origin || 'http://localhost:3001';
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    return currentOrigin;
+  }
+  return '';
+}
+
+async function parseApiResponseJson(res, defaultErrMsg = 'Request failed.') {
+  const contentType = res.headers.get('content-type') || '';
+  let data = null;
+  if (contentType.includes('application/json')) {
+    try {
+      data = await res.json();
+    } catch (_) {
+      data = null;
+    }
+  } else {
+    await res.text().catch(() => '');
+    if (res.status === 502 || res.status === 503 || res.status === 504) {
+      throw new Error('Backend server is booting up or temporarily unreachable. Please wait 5-10 seconds and try again.');
+    }
+    if (!res.ok) {
+      throw new Error(`Server returned status ${res.status}. Please try again.`);
+    }
+  }
+
+  if (!res.ok) {
+    let msg = (data && (data.detail || data.message || data.error)) || defaultErrMsg;
+    if (typeof msg === 'object') msg = JSON.stringify(msg);
+    throw new Error(msg);
+  }
+  return data;
+}
 
 function navigateTo(pageId) {
   if (!PAGES.includes(pageId)) pageId = 'home';
+
+  // If user is already logged in and tries to visit signin page, redirect to report
+  if (pageId === 'signin' && getStoredUser()) {
+    pageId = 'report';
+  }
 
   PAGES.forEach(p => {
     const el = document.getElementById('page-' + p);
@@ -155,7 +561,455 @@ let _lastFormMeta   = null;
 let _cameraStream = null;
 let _cameraFacing = 'environment';
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  renderAuthState();
+  refreshCurrentUser();
+
+  // ── Direct Database Auth Handlers ───────────────────────
+  const authTabSignin = document.getElementById('auth-tab-signin');
+  const authTabSignup = document.getElementById('auth-tab-signup');
+  const formSignin = document.getElementById('form-signin');
+  const formSignup = document.getElementById('form-signup');
+  const authMsg = document.getElementById('auth-msg');
+
+  function showAuthMsg(msg, isError = true) {
+    if (!authMsg) return;
+    authMsg.textContent = msg;
+    authMsg.style.display = 'block';
+    authMsg.style.background = isError ? '#fef2f2' : '#f0fdf4';
+    authMsg.style.color = isError ? '#991b1b' : '#166534';
+    authMsg.style.border = isError ? '1px solid #fecaca' : '1px solid #bbf7d0';
+  }
+
+  if (authTabSignin && authTabSignup && formSignin && formSignup) {
+    authTabSignin.addEventListener('click', () => {
+      authTabSignin.style.background = '#fff';
+      authTabSignin.style.color = '#0f172a';
+      authTabSignup.style.background = 'transparent';
+      authTabSignup.style.color = '#64748b';
+      formSignin.style.display = 'block';
+      formSignup.style.display = 'none';
+      if (authMsg) authMsg.style.display = 'none';
+    });
+
+    authTabSignup.addEventListener('click', () => {
+      authTabSignup.style.background = '#fff';
+      authTabSignup.style.color = '#0f172a';
+      authTabSignin.style.background = 'transparent';
+      authTabSignin.style.color = '#64748b';
+      formSignup.style.display = 'block';
+      formSignin.style.display = 'none';
+      if (authMsg) authMsg.style.display = 'none';
+    });
+  }
+
+  if (formSignin) {
+    formSignin.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('signin-email')?.value.trim();
+      const password = document.getElementById('signin-password')?.value.trim();
+      const submitBtn = document.getElementById('signin-btn');
+      if (!email || !password) return showAuthMsg('Please fill in both Email and Password.');
+
+      try {
+        if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Signing in...'; }
+        const res = await fetch(`${getApiBaseUrl()}/api/auth/signin`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await parseApiResponseJson(res, 'Invalid email or password.');
+        
+        setStoredUser({ token: data.token, user: data.user });
+        renderAuthState();
+        showAuthMsg('Sign in successful! Redirecting...', false);
+        setTimeout(() => navigateTo('report'), 500);
+      } catch (err) {
+        showAuthMsg(err.message || 'Invalid email or password.');
+      } finally {
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Sign In \u2192'; }
+      }
+    });
+  }
+
+  const signupEmailInput = document.getElementById('signup-email');
+  const signupPhoneInput = document.getElementById('signup-phone');
+  const signupEmailMsg   = document.getElementById('signup-email-msg');
+  const signupPhoneMsg   = document.getElementById('signup-phone-msg');
+
+  async function checkEmailAvailability() {
+    const email = signupEmailInput?.value.trim();
+    if (!email || !email.includes('@')) {
+      if (signupEmailMsg) signupEmailMsg.style.display = 'none';
+      if (signupEmailInput) signupEmailInput.style.borderColor = '#cbd5e1';
+      return true;
+    }
+    try {
+      const res = await fetch(`${getApiBaseUrl()}/api/auth/check-availability?email=${encodeURIComponent(email)}`);
+      const data = await res.json();
+      if (!data.email_available) {
+        if (signupEmailMsg) {
+          signupEmailMsg.style.display = 'block';
+          signupEmailMsg.style.color = '#dc2626';
+          signupEmailMsg.textContent = '⚠️ ' + (data.email_error || 'Email already exists. Please sign in.');
+        }
+        if (signupEmailInput) signupEmailInput.style.borderColor = '#dc2626';
+        return false;
+      } else {
+        if (signupEmailMsg) {
+          signupEmailMsg.style.display = 'block';
+          signupEmailMsg.style.color = '#16a34a';
+          signupEmailMsg.textContent = '✓ Email is available';
+        }
+        if (signupEmailInput) signupEmailInput.style.borderColor = '#16a34a';
+        return true;
+      }
+    } catch (_) {
+      return true;
+    }
+  }
+
+  async function checkPhoneAvailability() {
+    const phone = signupPhoneInput?.value.trim();
+    const digits = (phone || '').replace(/\D/g, '');
+    if (!phone || digits.length < 10) {
+      if (signupPhoneMsg) signupPhoneMsg.style.display = 'none';
+      if (signupPhoneInput) signupPhoneInput.style.borderColor = '#cbd5e1';
+      return true;
+    }
+    try {
+      const res = await fetch(`${getApiBaseUrl()}/api/auth/check-availability?phone=${encodeURIComponent(phone)}`);
+      const data = await res.json();
+      if (!data.phone_available) {
+        if (signupPhoneMsg) {
+          signupPhoneMsg.style.display = 'block';
+          signupPhoneMsg.style.color = '#dc2626';
+          signupPhoneMsg.textContent = '⚠️ ' + (data.phone_error || 'Phone number already registered. Use a different number.');
+        }
+        if (signupPhoneInput) signupPhoneInput.style.borderColor = '#dc2626';
+        return false;
+      } else {
+        if (signupPhoneMsg) {
+          signupPhoneMsg.style.display = 'block';
+          signupPhoneMsg.style.color = '#16a34a';
+          signupPhoneMsg.textContent = '✓ Phone number is available';
+        }
+        if (signupPhoneInput) signupPhoneInput.style.borderColor = '#16a34a';
+        return true;
+      }
+    } catch (_) {
+      return true;
+    }
+  }
+
+  if (signupEmailInput) {
+    signupEmailInput.addEventListener('blur', checkEmailAvailability);
+    signupEmailInput.addEventListener('input', () => {
+      if (signupEmailMsg) signupEmailMsg.style.display = 'none';
+      signupEmailInput.style.borderColor = '#cbd5e1';
+    });
+  }
+  if (signupPhoneInput) {
+    signupPhoneInput.addEventListener('blur', checkPhoneAvailability);
+    signupPhoneInput.addEventListener('input', () => {
+      if (signupPhoneMsg) signupPhoneMsg.style.display = 'none';
+      signupPhoneInput.style.borderColor = '#cbd5e1';
+    });
+  }
+
+  if (formSignup) {
+    formSignup.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('signup-name')?.value.trim();
+      const phone = document.getElementById('signup-phone')?.value.trim();
+      const email = document.getElementById('signup-email')?.value.trim();
+      const password = document.getElementById('signup-password')?.value.trim();
+      const submitBtn = document.getElementById('signup-btn');
+      if (!name || !phone || !email || !password) return showAuthMsg('Please fill in Name, Phone Number, Email, and Password.');
+
+      const phoneDigits = phone.replace(/\D/g, '');
+      if (phoneDigits.length < 10) {
+        return showAuthMsg('Please enter a valid 10-digit Phone Number.');
+      }
+
+      // Pre-check availability
+      const [emailOk, phoneOk] = await Promise.all([checkEmailAvailability(), checkPhoneAvailability()]);
+      if (!emailOk || !phoneOk) {
+        return showAuthMsg('Please use a different Email or Phone number that is not already registered.');
+      }
+
+      try {
+        if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Creating account...'; }
+        const res = await fetch(`${getApiBaseUrl()}/api/auth/signup`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, phone, email, password })
+        });
+        const data = await parseApiResponseJson(res, 'Account creation failed.');
+
+        setStoredUser({ token: data.token, user: data.user });
+        renderAuthState();
+        showAuthMsg('Account created successfully! Redirecting...', false);
+        setTimeout(() => navigateTo('report'), 500);
+      } catch (err) {
+        showAuthMsg(err.message || 'Account creation failed.');
+      } finally {
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Create Account \u2192'; }
+      }
+    });
+  }
+
+  const logoutBtn = document.getElementById('logout-btn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      userLogout();
+    });
+  }
+
+  const navUserBadge = document.getElementById('nav-user-badge');
+  if (navUserBadge) {
+    navUserBadge.style.cursor = 'pointer';
+    navUserBadge.title = 'Click to open Dashboard & History';
+    navUserBadge.addEventListener('click', (e) => {
+      e.preventDefault();
+      openDashboardModal();
+    });
+  }
+
+  const navHistory = document.getElementById('nav-history');
+  if (navHistory) {
+    navHistory.addEventListener('click', (e) => {
+      e.preventDefault();
+      openDashboardModal();
+    });
+  }
+
+  const closeDashBtn = document.getElementById('close-dashboard-btn');
+  if (closeDashBtn) {
+    closeDashBtn.addEventListener('click', () => {
+      const modal = document.getElementById('dashboard-modal');
+      if (modal) modal.style.display = 'none';
+    });
+  }
+
+  // ── Forgot Password 3-Step Flow ──────────────────────────
+  let _forgotEmail = '';
+  let _forgotOtp   = '';
+
+  const authTabsRow       = document.getElementById('auth-tabs-row');
+  const panelForgotEmail  = document.getElementById('panel-forgot-email');
+  const panelForgotOtp    = document.getElementById('panel-forgot-otp');
+  const panelForgotNewpwd = document.getElementById('panel-forgot-newpwd');
+
+  function showForgotStep(step) {
+    // step: 'email' | 'otp' | 'newpwd' | null (back to signin)
+    const allForgotPanels = [panelForgotEmail, panelForgotOtp, panelForgotNewpwd];
+    allForgotPanels.forEach(p => { if (p) p.style.display = 'none'; });
+
+    if (step === null) {
+      // Back to normal signin
+      if (authTabsRow)       authTabsRow.style.display = 'flex';
+      if (formSignin)        formSignin.style.display  = 'block';
+      if (formSignup)        formSignup.style.display  = 'none';
+      const title    = document.getElementById('auth-header-title');
+      const subtitle = document.getElementById('auth-header-subtitle');
+      if (title)    title.textContent    = 'Welcome to RepairLensAI';
+      if (subtitle) subtitle.textContent = 'Sign in or create an account to start estimating car damage';
+      if (authTabSignin) { authTabSignin.style.background = '#fff'; authTabSignin.style.color = '#0f172a'; }
+      if (authTabSignup) { authTabSignup.style.background = 'transparent'; authTabSignup.style.color = '#64748b'; }
+      if (authMsg) authMsg.style.display = 'none';
+      return;
+    }
+
+    // Hide tabs & normal forms
+    if (authTabsRow) authTabsRow.style.display = 'none';
+    if (formSignin)  formSignin.style.display   = 'none';
+    if (formSignup)  formSignup.style.display   = 'none';
+    if (authMsg)     authMsg.style.display       = 'none';
+
+    const titleEl    = document.getElementById('auth-header-title');
+    const subtitleEl = document.getElementById('auth-header-subtitle');
+
+    if (step === 'email') {
+      if (panelForgotEmail) panelForgotEmail.style.display = 'block';
+      if (titleEl)    titleEl.textContent    = 'Forgot Password';
+      if (subtitleEl) subtitleEl.textContent = 'Reset your password via OTP';
+    } else if (step === 'otp') {
+      if (panelForgotOtp) panelForgotOtp.style.display = 'block';
+      const sentEl = document.getElementById('otp-sent-email');
+      if (sentEl) sentEl.textContent = _forgotEmail;
+      if (titleEl)    titleEl.textContent    = 'Enter OTP';
+      if (subtitleEl) subtitleEl.textContent = 'Check your email for the 6-digit code';
+    } else if (step === 'newpwd') {
+      if (panelForgotNewpwd) panelForgotNewpwd.style.display = 'block';
+      if (titleEl)    titleEl.textContent    = 'Create New Password';
+      if (subtitleEl) subtitleEl.textContent = 'Choose a strong password for your account';
+    }
+  }
+
+  // "Forgot password?" link → Step 1
+  const forgotLink = document.getElementById('forgot-password-link');
+  if (forgotLink) {
+    forgotLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      const emailVal = document.getElementById('signin-email')?.value.trim();
+      if (emailVal) {
+        const forgotInput = document.getElementById('forgot-email-input');
+        if (forgotInput) forgotInput.value = emailVal;
+      }
+      showForgotStep('email');
+    });
+  }
+
+  // Back to Sign In link
+  const backToSigninLink = document.getElementById('back-to-signin-link');
+  if (backToSigninLink) {
+    backToSigninLink.addEventListener('click', (e) => { e.preventDefault(); showForgotStep(null); });
+  }
+
+  // Back to Email step
+  const backToEmailLink = document.getElementById('back-to-email-link');
+  if (backToEmailLink) {
+    backToEmailLink.addEventListener('click', (e) => { e.preventDefault(); showForgotStep('email'); });
+  }
+
+  // Auth tab clicks should also exit forgot-password mode
+  if (authTabSignin) {
+    authTabSignin.addEventListener('click', () => {
+      authTabsRow && (authTabsRow.style.display = 'flex');
+      authTabSignin.style.background = '#fff';     authTabSignin.style.color = '#0f172a';
+      authTabSignup.style.background = 'transparent'; authTabSignup.style.color = '#64748b';
+      if (formSignin) formSignin.style.display = 'block';
+      if (formSignup) formSignup.style.display = 'none';
+      [panelForgotEmail, panelForgotOtp, panelForgotNewpwd].forEach(p => { if (p) p.style.display = 'none'; });
+      if (authMsg) authMsg.style.display = 'none';
+    });
+  }
+  if (authTabSignup) {
+    authTabSignup.addEventListener('click', () => {
+      authTabsRow && (authTabsRow.style.display = 'flex');
+      authTabSignup.style.background = '#fff';     authTabSignup.style.color = '#0f172a';
+      authTabSignin.style.background = 'transparent'; authTabSignin.style.color = '#64748b';
+      if (formSignup) formSignup.style.display = 'block';
+      if (formSignin) formSignin.style.display = 'none';
+      [panelForgotEmail, panelForgotOtp, panelForgotNewpwd].forEach(p => { if (p) p.style.display = 'none'; });
+      if (authMsg) authMsg.style.display = 'none';
+    });
+  }
+
+  // STEP 1: Send OTP
+  const sendOtpBtn = document.getElementById('send-otp-btn');
+  if (sendOtpBtn) {
+    sendOtpBtn.addEventListener('click', async () => {
+      const email = document.getElementById('forgot-email-input')?.value.trim();
+      if (!email) return showAuthMsg('Please enter your email address.');
+      _forgotEmail = email;
+      sendOtpBtn.disabled = true;
+      sendOtpBtn.textContent = 'Sending OTP...';
+      try {
+        const res = await fetch(`${getApiBaseUrl()}/api/auth/forgot-password`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email })
+        });
+        const data = await parseApiResponseJson(res, 'Failed to send OTP.');
+        showForgotStep('otp');
+        showAuthMsg('OTP sent! Check your email inbox (and spam folder).', false);
+      } catch (err) {
+        showAuthMsg(err.message || 'Failed to send OTP. Please try again.');
+      } finally {
+        sendOtpBtn.disabled = false;
+        sendOtpBtn.textContent = 'Send OTP →';
+      }
+    });
+  }
+
+  // Resend OTP
+  const resendOtpLink = document.getElementById('resend-otp-link');
+  if (resendOtpLink) {
+    resendOtpLink.addEventListener('click', async (e) => {
+      e.preventDefault();
+      if (!_forgotEmail) return;
+      resendOtpLink.textContent = 'Sending...';
+      try {
+        const res = await fetch(`${getApiBaseUrl()}/api/auth/forgot-password`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: _forgotEmail })
+        });
+        await parseApiResponseJson(res, 'Failed to resend OTP.');
+        showAuthMsg('New OTP sent! Check your email.', false);
+      } catch (err) {
+        showAuthMsg(err.message || 'Failed to resend OTP.');
+      } finally {
+        resendOtpLink.textContent = 'Resend OTP';
+      }
+    });
+  }
+
+  // STEP 2: Verify OTP
+  const verifyOtpBtn = document.getElementById('verify-otp-btn');
+  if (verifyOtpBtn) {
+    verifyOtpBtn.addEventListener('click', async () => {
+      const otp = document.getElementById('otp-input')?.value.trim();
+      if (!otp || otp.length !== 6) return showAuthMsg('Please enter the 6-digit OTP.');
+      _forgotOtp = otp;
+      verifyOtpBtn.disabled = true;
+      verifyOtpBtn.textContent = 'Verifying...';
+      try {
+        const res = await fetch(`${getApiBaseUrl()}/api/auth/verify-otp`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: _forgotEmail, otp })
+        });
+        const data = await parseApiResponseJson(res, 'OTP verification failed.');
+        showForgotStep('newpwd');
+        if (authMsg) authMsg.style.display = 'none';
+      } catch (err) {
+        showAuthMsg(err.message || 'Invalid OTP. Please try again.');
+      } finally {
+        verifyOtpBtn.disabled = false;
+        verifyOtpBtn.textContent = 'Verify OTP →';
+      }
+    });
+  }
+
+  // STEP 3: Reset Password
+  const resetPwdBtn = document.getElementById('reset-password-btn');
+  if (resetPwdBtn) {
+    resetPwdBtn.addEventListener('click', async () => {
+      const newPwd     = document.getElementById('new-password-input')?.value.trim();
+      const confirmPwd = document.getElementById('confirm-password-input')?.value.trim();
+      if (!newPwd || newPwd.length < 6) return showAuthMsg('Password must be at least 6 characters.');
+      if (newPwd !== confirmPwd)          return showAuthMsg('Passwords do not match. Please re-enter.');
+      resetPwdBtn.disabled = true;
+      resetPwdBtn.textContent = 'Resetting...';
+      try {
+        const res = await fetch(`${getApiBaseUrl()}/api/auth/reset-password`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: _forgotEmail, otp: _forgotOtp, new_password: newPwd })
+        });
+        const data = await parseApiResponseJson(res, 'Password reset failed.');
+        // Success — go back to sign in
+        showForgotStep(null);
+        showAuthMsg('Password reset successfully! Please sign in with your new password. 🎉', false);
+        _forgotEmail = '';
+        _forgotOtp   = '';
+        // Pre-fill email
+        const signinEmailEl = document.getElementById('signin-email');
+        if (signinEmailEl) signinEmailEl.value = _forgotEmail || '';
+      } catch (err) {
+        showAuthMsg(err.message || 'Password reset failed. Please try again.');
+      } finally {
+        resetPwdBtn.disabled = false;
+        resetPwdBtn.textContent = 'Reset Password →';
+      }
+    });
+  }
+
+
   const tabUpload    = document.getElementById('tab-upload');
   const tabCamera    = document.getElementById('tab-camera');
   const panelUpload  = document.getElementById('panel-upload');
@@ -261,10 +1115,35 @@ document.addEventListener('submit', async (e) => {
   const btnLoader   = submitBtn ? submitBtn.querySelector('.btn-loader') : null;
   const resultPanel = document.getElementById('result-panel');
 
-  const imageFiles = document.getElementById('car-image').files;
+  const fileInput = document.getElementById('car-image');
+  const imageFiles = fileInput ? fileInput.files : [];
 
-  if (imageFiles.length === 0) { alert('Please upload a car photo.'); return; }
-  if (imageFiles.length > 1)   { alert('Please upload only 1 car photo at a time.'); return; }
+  if (!imageFiles || imageFiles.length === 0) {
+    alert('Please upload a car photo before analysis.');
+    return;
+  }
+  if (imageFiles.length > 1) {
+    alert('Please upload only 1 car photo at a time.');
+    return;
+  }
+
+  const selectedFile = imageFiles[0];
+  if (!selectedFile.type.startsWith('image/')) {
+    alert('Only image files are allowed.');
+    return;
+  }
+  if (selectedFile.size > 10 * 1024 * 1024) {
+    alert('Please upload an image smaller than 10 MB.');
+    return;
+  }
+
+  const currentUser = getStoredUser();
+  if (!currentUser) {
+    alert('Please sign in or sign up before running a damage analysis.');
+    navigateTo('signin');
+    return;
+  }
+
 
   if (btnText)   btnText.style.display   = 'none';
   if (btnLoader) btnLoader.style.display = 'inline-flex';
@@ -279,10 +1158,24 @@ document.addEventListener('submit', async (e) => {
     formData.append('car_type',    document.getElementById('car-type').value);
     formData.append('year',        document.getElementById('car-year').value);
 
-    const response = await fetch('/api/analyze', { method: 'POST', body: formData });
-    const data = await response.json();
+    const session = getAuthSession();
+    const response = await fetch(`${getApiBaseUrl()}/api/analyze`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${session.token}` },
+      body: formData
+    });
+    
+    const contentType = response.headers.get('content-type') || '';
+    let data = {};
+    if (contentType.includes('application/json')) {
+      data = await response.json();
+    } else {
+      const rawText = await response.text();
+      throw new Error(`Server returned HTML/non-JSON response (${response.status}): ${rawText.slice(0, 120)}`);
+    }
 
     if (response.ok && data.success) {
+      await refreshCurrentUser();
       showResult(data);
       _lastReportData = data;
       _lastFormMeta = {
@@ -293,8 +1186,7 @@ document.addEventListener('submit', async (e) => {
         year:    document.getElementById('car-year').value,
       };
     } else {
-      let errorMsg = data.analysis_message || 'Unknown error';
-      if (data.detail) errorMsg = JSON.stringify(data.detail);
+      let errorMsg = data.analysis_message || data.detail || 'Unknown error';
       alert('Error: ' + errorMsg);
     }
   } catch (error) {
@@ -355,84 +1247,85 @@ function createCombinedPriceCard(cp, detections) {
   const gstPct  = cp.gst_rate > 1 ? cp.gst_rate.toFixed(1) : ((cp.gst_rate || 0.18) * 100).toFixed(0);
 
   const damageBadgesHTML = detections.map(d => `
-    <span style="font-size:11px; padding:5px 12px; border-radius:20px; background:rgba(59,130,246,0.15); color:#93c5fd; border:1px solid rgba(59,130,246,0.3); display:inline-flex; align-items:center; gap:6px;">
+    <span style="font-size:11px; padding:5px 12px; border-radius:20px; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; font-weight:700; display:inline-flex; align-items:center; gap:6px;">
       <strong style="text-transform:capitalize;">${d.damage_type}</strong> &nbsp;—&nbsp; ${d.car_part}
     </span>
   `).join("");
 
   const box = document.createElement("div");
   box.className = "combined-price-card";
+  box.style.cssText = "background:#ffffff; border:1px solid #e2e8f0; border-radius:16px; padding:24px; box-shadow:0 4px 20px rgba(0,0,0,0.04); display:flex; flex-direction:column; gap:18px;";
   box.innerHTML = `
     <!-- Header -->
-    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:16px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; border-bottom:1px solid #e2e8f0; padding-bottom:16px;">
       <div style="display:flex; align-items:center; gap:12px;">
-        <div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#3b82f6,#1d4ed8);display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 4px 14px rgba(59,130,246,0.4);">
+        <div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#2563eb,#1d4ed8);display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 4px 14px rgba(37,99,235,0.3);">
           🧮
         </div>
         <div>
-          <h4 style="font-size:15px;font-weight:800;color:#fff;margin:0 0 2px 0;letter-spacing:0.02em;">TOTAL DAMAGE REPAIR ESTIMATE</h4>
-          <p style="font-size:12px;color:#94a3b8;margin:0;">${detections.length} damage${detections.length!==1?'s':''} detected &nbsp;·&nbsp; GST ${gstPct}% applied</p>
+          <h4 style="font-size:16px;font-weight:800;color:#0f172a;margin:0 0 2px 0;letter-spacing:0.01em;">TOTAL DAMAGE REPAIR ESTIMATE</h4>
+          <p style="font-size:12px;color:#475569;margin:0;font-weight:500;">${detections.length} damage${detections.length!==1?'s':''} detected &nbsp;·&nbsp; GST ${gstPct}% applied</p>
         </div>
       </div>
       ${savings > 0 ? `
-      <span style="font-size:12px;font-weight:800;padding:7px 16px;border-radius:20px;background:rgba(34,197,94,0.16);color:#4ade80;border:1px solid rgba(34,197,94,0.4);">
+      <span style="font-size:12px;font-weight:800;padding:7px 16px;border-radius:20px;background:#dcfce7;color:#15803d;border:1px solid #86efac;">
         💰 Aftermarket saves ₹${fmt(savings)}
       </span>` : ''}
     </div>
 
     <!-- Big Totals -->
-    <div class="price-totals-grid">
-      <div style="background:rgba(59,130,246,0.12);border:1px solid rgba(59,130,246,0.35);border-radius:14px;padding:18px;text-align:center;">
-        <div style="font-size:10px;font-weight:700;color:#93c5fd;text-transform:uppercase;letter-spacing:0.08em;">OEM Total Estimate</div>
-        <div style="font-size:28px;font-weight:900;color:#60a5fa;margin:6px 0 2px;">₹${fmt(cp.oem_total_estimate)}</div>
-        <div style="font-size:10px;color:#64748b;">Subtotal ₹${fmt(cp.oem_subtotal_before_gst)} + GST ₹${fmt(cp.oem_gst_amount)}</div>
+    <div class="price-totals-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+      <div style="background:#f0f7ff;border:1.5px solid #93c5fd;border-radius:14px;padding:18px;text-align:center;">
+        <div style="font-size:11px;font-weight:800;color:#1e40af;text-transform:uppercase;letter-spacing:0.06em;">OEM Total Estimate</div>
+        <div style="font-size:28px;font-weight:900;color:#1d4ed8;margin:6px 0 2px;">₹${fmt(cp.oem_total_estimate)}</div>
+        <div style="font-size:11px;color:#475569;font-weight:500;">Subtotal ₹${fmt(cp.oem_subtotal_before_gst)} + GST ₹${fmt(cp.oem_gst_amount)}</div>
       </div>
-      <div style="background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.35);border-radius:14px;padding:18px;text-align:center;">
-        <div style="font-size:10px;font-weight:700;color:#a7f3d0;text-transform:uppercase;letter-spacing:0.08em;">Aftermarket Total</div>
-        <div style="font-size:28px;font-weight:900;color:#34d399;margin:6px 0 2px;">₹${fmt(cp.aftermarket_total_estimate)}</div>
-        <div style="font-size:10px;color:#64748b;">Subtotal ₹${fmt(cp.aftermarket_subtotal_before_gst)} + GST ₹${fmt(cp.aftermarket_gst_amount)}</div>
+      <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:14px;padding:18px;text-align:center;">
+        <div style="font-size:11px;font-weight:800;color:#166534;text-transform:uppercase;letter-spacing:0.06em;">Aftermarket Total</div>
+        <div style="font-size:28px;font-weight:900;color:#15803d;margin:6px 0 2px;">₹${fmt(cp.aftermarket_total_estimate)}</div>
+        <div style="font-size:11px;color:#475569;font-weight:500;">Subtotal ₹${fmt(cp.aftermarket_subtotal_before_gst)} + GST ₹${fmt(cp.aftermarket_gst_amount)}</div>
       </div>
     </div>
 
     <!-- Itemised Breakdown -->
-    <div style="background:rgba(0,0,0,0.32);border-radius:12px;padding:18px;border:1px solid rgba(255,255,255,0.07);">
-      <div style="font-size:11px;font-weight:700;color:#cbd5e1;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:14px;">
+    <div style="background:#f8fafc;border-radius:12px;padding:18px;border:1px solid #e2e8f0;">
+      <div style="font-size:11px;font-weight:800;color:#1e293b;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:14px;">
         Itemised Cost Breakdown
       </div>
-      <div class="price-itemised-grid" style="font-size:12px;">
+      <div class="price-itemised-grid" style="font-size:13px; display:flex; flex-direction:column; gap:8px;">
         ${[
-          ['OEM Parts Price',        cp.total_oem_part_price,        '#93c5fd'],
-          ['Aftermarket Parts Price', cp.total_aftermarket_part_price, '#a7f3d0'],
-          ['Labour Charges',          cp.total_damage_labour,          '#fcd34d'],
-          ['Installation Charges',    cp.total_damage_installation,    '#fcd34d'],
-          ['Paint Cost',              cp.total_damage_paint,           '#fb923c'],
+          ['OEM Parts Price',        cp.total_oem_part_price,        '#1d4ed8'],
+          ['Aftermarket Parts Price', cp.total_aftermarket_part_price, '#15803d'],
+          ['Labour Charges',          cp.total_damage_labour,          '#b45309'],
+          ['Installation Charges',    cp.total_damage_installation,    '#b45309'],
+          ['Paint Cost',              cp.total_damage_paint,           '#c2410c'],
         ].filter(r => (r[1] || 0) > 0).map(([label, val, col]) => `
-          <div style="display:flex;justify-content:space-between;padding-bottom:6px;border-bottom:1px dashed rgba(255,255,255,0.05);">
-            <span style="color:#94a3b8;">${label}:</span>
-            <span style="color:${col};font-weight:700;">₹${fmt(val)}</span>
+          <div style="display:flex;justify-content:space-between;padding-bottom:6px;border-bottom:1px dashed #e2e8f0;">
+            <span style="color:#475569;font-weight:600;">${label}:</span>
+            <span style="color:${col};font-weight:800;">₹${fmt(val)}</span>
           </div>
         `).join('')}
-        <div style="display:flex;justify-content:space-between;padding-bottom:6px;border-bottom:1px dashed rgba(255,255,255,0.05);">
-          <span style="color:#94a3b8;">Repair Items:</span>
-          <span style="color:#818cf8;font-weight:700;">${cp.repair_item_count}</span>
+        <div style="display:flex;justify-content:space-between;padding-bottom:6px;border-bottom:1px dashed #e2e8f0;">
+          <span style="color:#475569;font-weight:600;">Repair Items:</span>
+          <span style="color:#4338ca;font-weight:800;">${cp.repair_item_count}</span>
         </div>
-        <div style="display:flex;justify-content:space-between;padding-bottom:6px;border-bottom:1px dashed rgba(255,255,255,0.05);">
-          <span style="color:#94a3b8;">Replacement Items:</span>
-          <span style="color:#f87171;font-weight:700;">${cp.replacement_item_count}</span>
+        <div style="display:flex;justify-content:space-between;padding-bottom:6px;border-bottom:1px dashed #e2e8f0;">
+          <span style="color:#475569;font-weight:600;">Replacement Items:</span>
+          <span style="color:#dc2626;font-weight:800;">${cp.replacement_item_count}</span>
         </div>
       </div>
     </div>
 
     <!-- Damage Badges -->
     <div>
-      <div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Damages Included:</div>
+      <div style="font-size:11px;color:#475569;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;font-weight:700;">Damages Included:</div>
       <div style="display:flex;flex-wrap:wrap;gap:8px;">${damageBadgesHTML}</div>
     </div>
 
     <!-- Estimate Disclaimer Notice -->
-    <div style="background:rgba(234,179,8,0.12); border:1px solid rgba(234,179,8,0.35); border-radius:10px; padding:12px 16px; margin-top:14px; display:flex; align-items:center; gap:10px; font-size:12px; color:#fde047;">
-      <span style="font-size:18px;">⚠️</span>
-      <div><strong>Notice:</strong> This is estimate Price not fixed It Vary 15-20%. Final repair cost may vary based on garage labor rates and local spare parts availability.</div>
+    <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:10px; padding:14px 16px; margin-top:6px; display:flex; align-items:center; gap:12px; font-size:13px; color:#92400e; line-height:1.5;">
+      <span style="font-size:20px; flex-shrink:0;">⚠️</span>
+      <div><strong style="color:#78350f;">Notice:</strong> This is an estimate price (varies 15–20%). Final repair cost may vary based on garage labor rates and local spare parts availability.</div>
     </div>
   `;
   return box;
@@ -454,7 +1347,7 @@ function showResult(data) {
     if (!res.success) {
       card.innerHTML = `
         <h3 style="font-size:16px; color:var(--text);">Result ${index + 1}: ${res.filename}</h3>
-        <p style="color:#f87171; font-weight:600;">${res.analysis_message}</p>
+        <p style="color:#dc2626; font-weight:600;">${res.analysis_message}</p>
       `;
       container.appendChild(card);
       return;
@@ -468,34 +1361,27 @@ function showResult(data) {
     header.style.cssText = "display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;";
     header.innerHTML = `
       <div>
-        <h3 style="font-size:18px; font-weight:800; color:var(--text); margin:0 0 4px 0;">Car Photo: ${res.filename}</h3>
-        <p style="font-size:13px; color:var(--text-muted); margin:0;">${detections.length} damage issue${detections.length !== 1 ? 's' : ''} detected by AI models</p>
+        <h3 style="font-size:18px; font-weight:800; color:#0f172a; margin:0 0 4px 0;">Car Photo: ${res.filename}</h3>
+        <p style="font-size:13px; color:#475569; margin:0;">${detections.length} damage issue${detections.length !== 1 ? 's' : ''} detected by AI models</p>
       </div>
       <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-        <span style="font-size:12px; padding:6px 16px; border-radius:20px; background:${detections.length > 0 ? 'rgba(239,68,68,0.15)' : 'rgba(34,197,94,0.15)'}; color:${detections.length > 0 ? '#f87171' : '#4ade80'}; font-weight:700; border:1px solid ${detections.length > 0 ? 'rgba(239,68,68,0.3)' : 'rgba(34,197,94,0.3)'};">
+        <span style="font-size:12px; padding:6px 16px; border-radius:20px; background:${detections.length > 0 ? '#fef2f2' : '#f0fdf4'}; color:${detections.length > 0 ? '#dc2626' : '#166534'}; font-weight:800; border:1px solid ${detections.length > 0 ? '#fecaca' : '#bbf7d0'};">
           ${detections.length > 0 ? `⚠ ${detections.length} Damage${detections.length !== 1 ? 's' : ''} Found` : '✓ No Damage Detected'}
         </span>
       </div>
     `;
     card.appendChild(header);
 
-    // ── PyTorch Classification Models Badges ──────────────────
+    // ── Classification Model Badge ──────────────────
     const pytorchModelsSection = document.createElement("div");
     pytorchModelsSection.style.cssText = "display:flex; gap:12px; flex-wrap:wrap; margin:14px 0 18px 0;";
     pytorchModelsSection.innerHTML = `
-      <div style="flex:1; min-width:220px; background:rgba(30,41,59,0.5); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:12px 14px; display:flex; align-items:center; justify-content:space-between;">
+      <div style="flex:1; min-width:220px; background:#fff1f2; border:1px solid #fecdd3; border-radius:12px; padding:12px 16px; display:flex; align-items:center; justify-content:space-between;">
         <div>
-          <div style="font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase;">Classification Model (carvsnoncar.pt)</div>
-          <div style="font-size:13px; font-weight:800; color:#38bdf8; margin-top:2px;">${res.car_vs_noncar ? res.car_vs_noncar.status : 'Vehicle Confirmed'}</div>
+          <div style="font-size:10px; font-weight:700; color:#9f1239; text-transform:uppercase; letter-spacing:0.04em;">Damage Assessment</div>
+          <div style="font-size:14px; font-weight:800; color:#e11d48; margin-top:2px;">${res.car_damage_classifier ? res.car_damage_classifier.status : 'Car Damage Identified'}</div>
         </div>
-        <span style="font-size:20px;">🚘</span>
-      </div>
-      <div style="flex:1; min-width:220px; background:rgba(30,41,59,0.5); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:12px 14px; display:flex; align-items:center; justify-content:space-between;">
-        <div>
-          <div style="font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase;">Damage Classifier (car_damage_classifier_pt_best.pt)</div>
-          <div style="font-size:13px; font-weight:800; color:#fb7185; margin-top:2px;">${res.car_damage_classifier ? res.car_damage_classifier.status : 'Car Damage Identified'}</div>
-        </div>
-        <span style="font-size:20px;">🔍</span>
+        <span style="font-size:22px;">🔍</span>
       </div>
     `;
     card.appendChild(pytorchModelsSection);
@@ -505,8 +1391,8 @@ function showResult(data) {
     imageGrid.className = "result-images-grid";
 
     const imgPanels = [
-      { src: res.original_b64, label: 'Original Car Image', badge: 'Uploaded', accentColor: 'rgba(0,0,0,0.04)', textColor: 'var(--text-muted)', borderColor: 'var(--border)' },
-      { src: res.combined_b64 || res.original_b64, label: 'AI Analyzed Result', badge: 'AI Detected', accentColor: 'rgba(232,98,42,0.12)', textColor: 'var(--orange)', borderColor: 'var(--orange)' }
+      { src: res.original_b64, label: 'Original Car Image', badge: 'Uploaded', accentColor: '#f1f5f9', textColor: '#475569', borderColor: '#cbd5e1' },
+      { src: res.combined_b64 || res.original_b64, label: 'AI Analyzed Result', badge: 'AI Detected', accentColor: '#fff7ed', textColor: '#c2410c', borderColor: '#fdba74' }
     ];
 
     imgPanels.forEach(p => {
@@ -515,9 +1401,9 @@ function showResult(data) {
       panel.innerHTML = `
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <span style="font-size:11px; font-weight:700; color:${p.textColor}; text-transform:uppercase; letter-spacing:0.07em;">${p.label}</span>
-          <span style="font-size:10px; padding:3px 9px; border-radius:4px; background:${p.accentColor}; color:${p.textColor}; font-weight:600;">${p.badge}</span>
+          <span style="font-size:10px; padding:3px 9px; border-radius:4px; background:${p.accentColor}; color:${p.textColor}; font-weight:700; border:1px solid ${p.borderColor};">${p.badge}</span>
         </div>
-        <img src="${p.src}" style="width:100%; border-radius:12px; border:1px solid ${p.borderColor}; object-fit:cover; box-shadow:0 4px 20px rgba(0,0,0,0.3);" />
+        <img src="${p.src}" style="width:100%; border-radius:12px; border:1px solid ${p.borderColor}; object-fit:cover; box-shadow:0 4px 16px rgba(0,0,0,0.06);" />
       `;
       imageGrid.appendChild(panel);
     });
@@ -528,21 +1414,21 @@ function showResult(data) {
     dashSection.style.cssText = "display:flex; flex-direction:column; gap:16px;";
 
     const dashHeader = document.createElement("div");
-    dashHeader.style.cssText = "display:flex; align-items:center; gap:10px; padding-bottom:12px; border-bottom:1px solid var(--border);";
+    dashHeader.style.cssText = "display:flex; align-items:center; gap:10px; padding-bottom:12px; border-bottom:1px solid #e2e8f0;";
     dashHeader.innerHTML = `
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-        <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
-      <span style="font-size:13px; font-weight:700; color:var(--text); text-transform:uppercase; letter-spacing:0.06em;">Damage & Price Breakdown</span>
+      <span style="font-size:13px; font-weight:800; color:#0f172a; text-transform:uppercase; letter-spacing:0.06em;">Damage & Price Breakdown</span>
     `;
     dashSection.appendChild(dashHeader);
 
     if (detections.length === 0) {
       dashSection.innerHTML += `
-        <div style="text-align:center; padding:32px; border:1px dashed var(--border); border-radius:12px; color:var(--text-muted);">
+        <div style="text-align:center; padding:32px; border:1px dashed #cbd5e1; border-radius:12px; color:#475569;">
           <div style="font-size:32px; margin-bottom:8px;">✅</div>
-          <p style="margin:0; font-size:14px; font-weight:600; color:#4ade80;">No structural damage detected</p>
-          <p style="margin:4px 0 0; font-size:12px;">This vehicle appears to be in good condition.</p>
+          <p style="margin:0; font-size:14px; font-weight:700; color:#16a34a;">No structural damage detected</p>
+          <p style="margin:4px 0 0; font-size:12px; color:#64748b;">This vehicle appears to be in good condition.</p>
         </div>
       `;
     } else {
@@ -552,7 +1438,7 @@ function showResult(data) {
 
       // 2. Render Header for Individual Damage Breakdown Cards
       const indLabel = document.createElement("div");
-      indLabel.style.cssText = "font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em; margin-top:8px;";
+      indLabel.style.cssText = "font-size:12px; font-weight:800; color:#334155; text-transform:uppercase; letter-spacing:0.06em; margin-top:8px;";
       indLabel.textContent = "Individual Damage Breakdown Items";
       dashSection.appendChild(indLabel);
 
@@ -560,24 +1446,23 @@ function showResult(data) {
       colGrid.className = "damage-cards-grid";
 
       const damageColors = {
-        'dent': { bg: 'rgba(249,115,22,0.12)', border: 'rgba(249,115,22,0.3)', text: '#fb923c', icon: '🔨' },
-        'scratch': { bg: 'rgba(234,179,8,0.12)', border: 'rgba(234,179,8,0.3)', text: '#eab308', icon: '✂️' },
-        'crack': { bg: 'rgba(239,68,68,0.12)', border: 'rgba(239,68,68,0.3)', text: '#f87171', icon: '⚡' },
-        'glass shatter': { bg: 'rgba(147,51,234,0.12)', border: 'rgba(147,51,234,0.3)', text: '#c084fc', icon: '💎' },
-        'lamp broken': { bg: 'rgba(59,130,246,0.12)', border: 'rgba(59,130,246,0.3)', text: '#60a5fa', icon: '💡' },
-        'tire flat': { bg: 'rgba(16,185,129,0.12)', border: 'rgba(16,185,129,0.3)', text: '#34d399', icon: '🛞' },
+        'dent': { bg: '#fff7ed', border: '#fed7aa', text: '#c2410c', icon: '🔨' },
+        'scratch': { bg: '#fefce8', border: '#fef08a', text: '#a16207', icon: '✂️' },
+        'crack': { bg: '#fef2f2', border: '#fecaca', text: '#b91c1c', icon: '⚡' },
+        'glass shatter': { bg: '#faf5ff', border: '#e9d5ff', text: '#6b21a8', icon: '💎' },
+        'lamp broken': { bg: '#eff6ff', border: '#bfdbfe', text: '#1d4ed8', icon: '💡' },
+        'tire flat': { bg: '#ecfdf5', border: '#a7f3d0', text: '#047857', icon: '🛞' },
       };
 
       detections.forEach(d => {
-        const col = damageColors[d.damage_type] || { bg: 'rgba(100,116,139,0.12)', border: 'rgba(100,116,139,0.3)', text: '#94a3b8', icon: '⚠️' };
+        const col = damageColors[d.damage_type] || { bg: '#f8fafc', border: '#cbd5e1', text: '#334155', icon: '⚠️' };
         const confBarWidth = Math.min(100, d.confidence);
-        const confBarColor = d.confidence >= 70 ? '#f87171' : d.confidence >= 40 ? '#fb923c' : '#facc15';
-        const sev = getSeverity(d.damage_type, d.confidence);
+        const confBarColor = d.confidence >= 70 ? '#dc2626' : d.confidence >= 40 ? '#ea580c' : '#ca8a04';
 
         const dmgCard = document.createElement("div");
         dmgCard.style.cssText = `
           background: ${col.bg};
-          border: 1px solid ${col.border};
+          border: 1.5px solid ${col.border};
           border-radius: 14px;
           padding: 18px;
           display: flex;
@@ -588,21 +1473,21 @@ function showResult(data) {
           <div style="display:flex; align-items:center; justify-content:space-between;">
             <span style="font-size:22px;">${col.icon}</span>
             <div style="display:flex; align-items:center; gap:6px;">
-              <span style="font-size:10px; padding:2px 8px; border-radius:8px; background:rgba(255,255,255,0.06); color:var(--text-muted); font-weight:600;">${d.model_type === 'Segmentation Model' ? 'SEG' : 'DET'}</span>
+              <span style="font-size:10px; padding:2px 8px; border-radius:8px; background:#e2e8f0; color:#334155; font-weight:700;">${d.model_type === 'Segmentation Model' ? 'SEG' : 'DET'}</span>
             </div>
           </div>
           <div>
-            <div style="font-size:15px; font-weight:800; color:${col.text}; text-transform:capitalize; margin-bottom:4px;">${d.damage_type}</div>
-            <div style="font-size:12px; color:var(--text-muted);">
-              Part: <span style="background:rgba(59,130,246,0.15); color:#60a5fa; padding:2px 7px; border-radius:4px; font-weight:600;">${d.car_part}</span>
+            <div style="font-size:16px; font-weight:900; color:${col.text}; text-transform:capitalize; margin-bottom:6px;">${d.damage_type}</div>
+            <div style="font-size:12px; color:#475569; font-weight:600;">
+              Part: <span style="background:#e0f2fe; color:#0369a1; padding:3px 8px; border-radius:6px; font-weight:700; border:1px solid #bae6fd;">${d.car_part}</span>
             </div>
           </div>
           <div>
             <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
-              <span style="font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">AI Confidence</span>
-              <span style="font-size:11px; font-weight:700; color:${confBarColor};">${d.confidence}%</span>
+              <span style="font-size:11px; color:#475569; text-transform:uppercase; letter-spacing:0.05em; font-weight:700;">AI Confidence</span>
+              <span style="font-size:11px; font-weight:800; color:${confBarColor};">${d.confidence}%</span>
             </div>
-            <div style="background:rgba(255,255,255,0.06); border-radius:4px; height:5px; overflow:hidden;">
+            <div style="background:#e2e8f0; border-radius:4px; height:6px; overflow:hidden;">
               <div style="width:${confBarWidth}%; height:100%; background:${confBarColor}; border-radius:4px; transition:width 0.8s ease;"></div>
             </div>
           </div>
@@ -889,6 +1774,7 @@ function triggerPrintReport(htmlContent) {
   }, 800);
 }
 
+const downloadPdfBtn = document.getElementById("download-pdf-btn");
 if (downloadPdfBtn) {
   downloadPdfBtn.addEventListener("click", () => {
     if (!_lastReportData || !(_lastReportData.results || []).length) {
@@ -900,16 +1786,18 @@ if (downloadPdfBtn) {
   });
 }
 
+
 // ── Razorpay Payment & Coupon Checkout Modal Logic ─────────
 let _checkoutState = { planName: '', origPrice: 0, discountAmount: 0, finalPrice: 0, couponCode: '' };
+let _reportCouponCode = '';
 
-function openCheckoutModal(planName, priceAmount) {
+function openCheckoutModal(planName, priceAmount, couponCode = '') {
   _checkoutState = {
     planName: planName,
     origPrice: priceAmount,
     discountAmount: 0,
     finalPrice: priceAmount,
-    couponCode: ''
+    couponCode: couponCode
   };
 
   const modal = document.getElementById('checkout-modal');
@@ -919,15 +1807,25 @@ function openCheckoutModal(planName, priceAmount) {
   const finalPriceEl = document.getElementById('modal-final-price');
   const couponInput = document.getElementById('coupon-code-input');
   const couponMsg = document.getElementById('coupon-msg');
+  const proceedButton = document.getElementById('proceed-razorpay-btn');
+  const guestBox = document.getElementById('checkout-guest-box');
 
   if (planNameEl) planNameEl.textContent = planName;
   if (origPriceEl) origPriceEl.textContent = '₹' + priceAmount.toLocaleString('en-IN');
   if (finalPriceEl) finalPriceEl.textContent = '₹' + priceAmount.toLocaleString('en-IN');
   if (discountRow) discountRow.style.display = 'none';
-  if (couponInput) couponInput.value = '';
+  if (couponInput) couponInput.value = couponCode;
   if (couponMsg) { couponMsg.style.display = 'none'; couponMsg.textContent = ''; }
+  if (proceedButton) proceedButton.disabled = false;
+
+  // Toggle guest details box if not logged in
+  const currentUser = getStoredUser();
+  if (guestBox) {
+    guestBox.style.display = currentUser ? 'none' : 'block';
+  }
 
   if (modal) modal.style.display = 'flex';
+  if (couponCode) handleApplyCoupon(couponCode);
 }
 
 function closeCheckoutModal() {
@@ -941,6 +1839,8 @@ async function handleApplyCoupon(code) {
   const discountRow = document.getElementById('modal-discount-row');
   const discountVal = document.getElementById('modal-discount-val');
   const finalPriceEl = document.getElementById('modal-final-price');
+  const applyButton = document.getElementById('apply-coupon-btn');
+  const proceedButton = document.getElementById('proceed-razorpay-btn');
 
   if (!code) {
     if (couponMsg) {
@@ -951,17 +1851,14 @@ async function handleApplyCoupon(code) {
     return;
   }
 
-  const BACKEND_URL = (window.location.protocol === 'file:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-    ? 'http://localhost:8000'
-    : '';
-
+  if (applyButton) applyButton.disabled = true;
+  if (proceedButton) proceedButton.disabled = true;
   try {
-    const res = await fetch(`${BACKEND_URL}/api/apply-coupon`, {
+    const data = await apiRequest('/api/apply-coupon', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ coupon_code: code, amount: _checkoutState.origPrice, plan_name: _checkoutState.planName })
     });
-    const data = await res.json();
 
     if (data.valid) {
       _checkoutState.discountAmount = data.discount_amount;
@@ -991,96 +1888,127 @@ async function handleApplyCoupon(code) {
     }
   } catch (e) {
     console.error('Error validating coupon:', e);
-    // Client-side fallback
-    const coupons = { 'REPAIR10': 0.10, 'CAR20': 0.20, 'FIRST50': 0.50, 'PIYUSH100': 100 };
-    if (coupons[code]) {
-      let disc = coupons[code] > 1 ? coupons[code] : Math.round(_checkoutState.origPrice * coupons[code]);
-      disc = Math.min(_checkoutState.origPrice, disc);
-      const finalP = Math.max(0, _checkoutState.origPrice - disc);
-      _checkoutState.discountAmount = disc;
-      _checkoutState.finalPrice = finalP;
-      _checkoutState.couponCode = code;
-
-      if (discountRow) discountRow.style.display = 'flex';
-      if (discountVal) discountVal.textContent = '-₹' + disc;
-      if (finalPriceEl) finalPriceEl.textContent = '₹' + finalP;
-      if (couponMsg) {
-        couponMsg.style.display = 'block';
-        couponMsg.style.color = '#16a34a';
-        couponMsg.textContent = `Coupon '${code}' applied! Saved ₹${disc}`;
-      }
-    } else {
-      if (couponMsg) {
-        couponMsg.style.display = 'block';
-        couponMsg.style.color = '#ef4444';
-        couponMsg.textContent = 'Invalid coupon code. Try FIRST50, REPAIR10, or CAR20.';
-      }
+    _checkoutState.discountAmount = 0;
+    _checkoutState.finalPrice = _checkoutState.origPrice;
+    _checkoutState.couponCode = '';
+    if (discountRow) discountRow.style.display = 'none';
+    if (finalPriceEl) finalPriceEl.textContent = '₹' + _checkoutState.origPrice.toLocaleString('en-IN');
+    if (couponMsg) {
+      couponMsg.style.display = 'block';
+      couponMsg.style.color = '#ef4444';
+      couponMsg.textContent = e.message || 'Coupon validation failed.';
     }
+  } finally {
+    if (applyButton) applyButton.disabled = false;
+    if (proceedButton) proceedButton.disabled = false;
   }
 }
 
-function initRazorpayPayment(planName, finalPrice, couponCode, discountAmount) {
-  const BACKEND_URL = (window.location.protocol === 'file:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-    ? 'http://localhost:8000'
-    : '';
+async function initRazorpayPayment(planName, finalPrice, couponCode) {
+  let user = getStoredUser();
 
-  fetch(`${BACKEND_URL}/api/create-razorpay-order`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ amount: _checkoutState.origPrice, discount_amount: discountAmount, plan_name: planName, coupon_code: couponCode })
-  })
-  .then(res => res.json())
-  .catch(() => ({
-    success: true,
-    order_id: 'order_' + Date.now(),
-    amount: finalPrice * 100,
-    key_id: 'rzp_test_RMCL2XxhTCiDHJ'
-  }))
-  .then(data => {
-    const orderId = data.order_id || ('order_' + Date.now());
-    const keyId = data.key_id || 'rzp_test_RMCL2XxhTCiDHJ';
+  // If user is not logged in, handle guest auto-signup from checkout modal
+  if (!user) {
+    const name = document.getElementById('checkout-guest-name')?.value.trim();
+    const phone = document.getElementById('checkout-guest-phone')?.value.trim();
+    const email = document.getElementById('checkout-guest-email')?.value.trim();
+    const password = document.getElementById('checkout-guest-password')?.value.trim();
+
+    if (!email || !password || !name || !phone) {
+      alert('Please fill in your Full Name, Phone, Email, and Password in the checkout box to complete your purchase.');
+      return;
+    }
+
+    try {
+      // Attempt Sign Up first
+      const signupRes = await fetch(`${getApiBaseUrl()}/api/auth/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, phone, email, password })
+      });
+      let signupData = null;
+      try {
+        signupData = await parseApiResponseJson(signupRes, 'Account setup failed.');
+      } catch (e) {
+        signupData = { detail: e.message };
+      }
+      
+      if (signupRes.ok && signupData && signupData.token) {
+        setStoredUser({ token: signupData.token, user: signupData.user });
+        user = signupData.user;
+      } else if (signupData && signupData.detail && signupData.detail.includes('already exists')) {
+        // Attempt Sign In if already registered
+        const signinRes = await fetch(`${getApiBaseUrl()}/api/auth/signin`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const signinData = await parseApiResponseJson(signinRes, 'Sign in failed.');
+        if (signinRes.ok && signinData.token) {
+          setStoredUser({ token: signinData.token, user: signinData.user });
+          user = signinData.user;
+        } else {
+          throw new Error(signinData.detail || 'Sign in failed.');
+        }
+      } else {
+        throw new Error((signupData && signupData.detail) || 'Account setup failed.');
+      }
+      renderAuthState();
+    } catch (err) {
+      alert('Account setup error: ' + (err.message || 'Please check your details.'));
+      return;
+    }
+  }
+
+  if (!window.Razorpay) {
+    alert('Razorpay Checkout SDK could not be loaded. Please check your internet connection.');
+    return;
+  }
+
+  try {
+    const data = await apiRequest('/api/create-razorpay-order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan_name: planName, coupon_code: couponCode || null })
+    });
+    const orderId = data.order_id;
 
     const options = {
-      key: keyId,
-      amount: finalPrice * 100,
+      key: data.key_id,
+      amount: data.payment_type === 'order' ? data.amount : undefined,
       currency: "INR",
-      name: "RepairLensAI",
+      name: "Dateai",
       description: planName + (couponCode ? ` (Coupon: ${couponCode})` : ''),
-      image: "https://cdn-icons-png.flaticon.com/512/744/744465.png",
-      order_id: (orderId.startsWith('order_') && orderId.length > 20) ? orderId : undefined,
-      prefill: {
-        name: "PIYUSH GUPTA",
-        email: "piyush.gupta@repairlens.ai",
-        contact: "9876543210"
-      },
       notes: {
-        account_id: "acc_RMCL2XxhTCiDHJ",
-        mid: "RMCL2XxhTCiDHJ",
-        merchant: "PIYUSH GUPTA",
         plan: planName,
         coupon: couponCode || "None"
+      },
+      prefill: {
+        email: user.email,
+        name: user.name || '',
+        contact: user.phone || ''
       },
       theme: {
         color: "#E8622A"
       },
-      handler: function (response) {
-        const payId = response.razorpay_payment_id || ('pay_' + Math.random().toString(36).substring(2, 10));
-        const ordId = response.razorpay_order_id || orderId;
-
-        fetch(`${BACKEND_URL}/api/verify-razorpay-payment`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            razorpay_order_id: ordId,
-            razorpay_payment_id: payId,
-            razorpay_signature: response.razorpay_signature || '',
-            plan_name: planName,
-            amount: finalPrice,
-            coupon_code: couponCode
-          })
-        }).catch(err => console.log('Backend verification notification:', err));
-
-        showRazorpaySuccessModal(planName, finalPrice, ordId, payId);
+      handler: async function (response) {
+        try {
+          await apiRequest('/api/verify-razorpay-payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              razorpay_order_id: response.razorpay_order_id || null,
+              razorpay_subscription_id: response.razorpay_subscription_id || null,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature
+            })
+          });
+          const updatedUser = await refreshCurrentUser();
+          const paymentRef = response.razorpay_subscription_id || response.razorpay_order_id;
+          showRazorpaySuccessModal(planName, data.final_price_rupees, paymentRef, response.razorpay_payment_id, updatedUser?.report_credits);
+        } catch (error) {
+          alert(`Payment was received but could not be verified: ${error.message}. Contact support before retrying.`);
+        }
       },
       modal: {
         ondismiss: function() {
@@ -1089,19 +2017,20 @@ function initRazorpayPayment(planName, finalPrice, couponCode, discountAmount) {
       }
     };
 
-    if (window.Razorpay) {
-      const rzp = new window.Razorpay(options);
-      rzp.on('payment.failed', function (response) {
-        alert('Payment failed: ' + (response.error.description || 'Transaction declined'));
-      });
-      rzp.open();
-    } else {
-      showRazorpaySuccessModal(planName, finalPrice, orderId, 'pay_test_' + Math.random().toString(36).substring(2, 8));
-    }
-  });
+    if (data.payment_type === 'subscription') options.subscription_id = data.subscription_id;
+    else options.order_id = orderId;
+
+    const rzp = new window.Razorpay(options);
+    rzp.on('payment.failed', function (response) {
+      alert('Payment failed: ' + (response.error.description || 'Transaction declined'));
+    });
+    rzp.open();
+  } catch (error) {
+    alert(error.message || 'Could not start Razorpay checkout.');
+  }
 }
 
-function showRazorpaySuccessModal(planName, priceAmount, orderId, paymentId) {
+function showRazorpaySuccessModal(planName, priceAmount, orderId, paymentId, credits) {
   const modal = document.getElementById('razorpay-success-modal');
   const planEl = document.getElementById('rzp-receipt-plan');
   const amountEl = document.getElementById('rzp-receipt-amount');
@@ -1112,6 +2041,8 @@ function showRazorpaySuccessModal(planName, priceAmount, orderId, paymentId) {
   if (amountEl) amountEl.textContent = '₹' + priceAmount.toLocaleString('en-IN');
   if (orderEl) orderEl.textContent = orderId;
   if (paymentEl) paymentEl.textContent = paymentId;
+  const creditsEl = document.getElementById('rzp-receipt-credits');
+  if (creditsEl) creditsEl.textContent = credits ?? '-';
 
   if (modal) {
     modal.style.display = 'flex';
@@ -1119,13 +2050,14 @@ function showRazorpaySuccessModal(planName, priceAmount, orderId, paymentId) {
 }
 
 // Wire Razorpay & Checkout event listeners
-document.addEventListener('click', (e) => {
+document.addEventListener('click', async (e) => {
   const btn = e.target.closest('.razorpay-btn');
   if (btn) {
     e.preventDefault();
     const plan = btn.dataset.plan || 'RepairLensAI Plan';
     const price = parseInt(btn.dataset.price || '29', 10);
-    openCheckoutModal(plan, price);
+    const reportCoupon = btn.id === 'report-pay-btn' ? _reportCouponCode : '';
+    openCheckoutModal(plan, price, reportCoupon);
   }
 
   if (e.target.id === 'close-checkout-modal') {
@@ -1137,17 +2069,70 @@ document.addEventListener('click', (e) => {
     handleApplyCoupon(val);
   }
 
+  if (e.target.id === 'report-apply-coupon-btn' || e.target.closest('#report-apply-coupon-btn')) {
+    const val = (document.getElementById('report-coupon-input')?.value || '').trim().toUpperCase();
+    const msg = document.getElementById('report-coupon-msg');
+    if (!val) {
+      if (msg) { msg.style.display = 'block'; msg.style.color = '#ef4444'; msg.textContent = 'Please enter a coupon code.'; }
+      return;
+    }
+
+    try {
+      const data = await apiRequest('/api/apply-coupon', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ coupon_code: val, amount: 29, plan_name: 'Report Credit Token' })
+      });
+      if (!data.valid) throw new Error(data.message);
+      _reportCouponCode = data.code;
+      if (data.final_amount === 0) {
+        await apiRequest('/api/redeem-report-coupon', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ coupon_code: val, amount: 29, plan_name: 'Report Credit Token' })
+        });
+        await refreshCurrentUser();
+        _reportCouponCode = '';
+        if (msg) {
+          msg.style.display = 'block';
+          msg.style.color = '#16a34a';
+          msg.textContent = 'Free report activated. You can analyse your uploaded photo now.';
+        }
+      } else if (msg) {
+        msg.style.display = 'block';
+        msg.style.color = '#16a34a';
+        msg.textContent = `${data.message} Continue to checkout to pay ₹${data.final_amount}.`;
+      }
+    } catch (error) {
+      _reportCouponCode = '';
+      if (msg) {
+        msg.style.display = 'block';
+        msg.style.color = '#ef4444';
+        msg.textContent = error.message || 'Coupon validation failed.';
+      }
+    }
+  }
+
   const couponTag = e.target.closest('.quick-coupon-tag');
   if (couponTag) {
     const code = couponTag.dataset.code;
-    const input = document.getElementById('coupon-code-input');
-    if (input) input.value = code;
-    handleApplyCoupon(code);
+    if (couponTag.closest('#checkout-modal')) {
+      const input = document.getElementById('coupon-code-input');
+      if (input) input.value = code;
+      handleApplyCoupon(code);
+    } else {
+      const reportInput = document.getElementById('report-coupon-input');
+      if (reportInput) reportInput.value = code;
+      const msg = document.getElementById('report-coupon-msg');
+      if (msg) {
+        msg.style.display = 'block';
+        msg.style.color = '#475569';
+        msg.textContent = 'Coupon selected. Click Apply to confirm.';
+      }
+    }
   }
 
   if (e.target.id === 'proceed-razorpay-btn' || e.target.closest('#proceed-razorpay-btn')) {
     closeCheckoutModal();
-    initRazorpayPayment(_checkoutState.planName, _checkoutState.finalPrice, _checkoutState.couponCode, _checkoutState.discountAmount);
+    initRazorpayPayment(_checkoutState.planName, _checkoutState.finalPrice, _checkoutState.couponCode);
   }
 
   if (e.target.id === 'rzp-close-modal-btn') {

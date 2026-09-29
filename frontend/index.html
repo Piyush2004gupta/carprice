@@ -27,10 +27,11 @@
 
       <ul class="nav-links" id="nav-links">
         <li><a href="#" class="nav-link active" id="nav-home" data-page="home">Home</a></li>
-        <li><a href="#" class="nav-link" id="nav-pricing" data-page="pricing">View Pricing</a></li>
         <li><a href="#" class="nav-link" id="nav-signin" data-page="signin">Sign in</a></li>
         <li><a href="#" class="nav-link nav-link-report" id="nav-report" data-page="report">New report</a></li>
-        <li><button class="btn btn-orange razorpay-btn" data-plan="Quick Report Pass (₹29)" data-price="29" style="padding:6px 14px; font-size:13px; display:inline-flex; align-items:center; gap:6px;">💳 Pay ₹29 (Razorpay)</button></li>
+        <li id="nav-history-li" style="display:none;"><a href="#" class="nav-link" id="nav-history">My History</a></li>
+        <li><span id="nav-user-badge" class="user-badge" style="display:none;"><span class="user-dot"></span>Guest</span></li>
+        <li><button id="logout-btn" class="btn btn-ghost-dark" style="padding:6px 14px; font-size:12px; display:none;">Sign out</button></li>
       </ul>
 
       <button class="hamburger" id="hamburger" aria-label="Toggle menu">
@@ -60,8 +61,7 @@
           </p>
           <div class="hero-actions">
             <button class="btn btn-orange btn-lg" id="hero-cta" data-page="report">Start a report</button>
-            <button class="btn btn-outline btn-lg razorpay-btn" data-plan="Single Report Token" data-price="29">💳 Pay &#8377;29 via Razorpay</button>
-            <button class="btn btn-outline btn-lg" id="hero-pricing" data-page="pricing">See pricing</button>
+            <button class="btn btn-outline btn-lg" id="hero-signin" data-page="signin">Sign in / Sign up</button>
           </div>
         </div>
 
@@ -117,8 +117,8 @@
           </div>
           <div class="stat-divider"></div>
           <div class="stat-item">
-            <span class="stat-value">&#8377;29</span>
-            <span class="stat-label">starting price per report</span>
+            <span class="stat-value">FREE</span>
+            <span class="stat-label">AI Damage Analysis</span>
           </div>
           <div class="stat-divider"></div>
           <div class="stat-item">
@@ -170,7 +170,6 @@
         <div class="footer-links-group">
           <p class="footer-group-label">Product</p>
           <a href="#" class="footer-link" data-page="home">Home</a>
-          <a href="#" class="footer-link" data-page="pricing">Pricing</a>
           <a href="#" class="footer-link" data-page="report">New report</a>
         </div>
         <div class="footer-links-group">
@@ -185,139 +184,160 @@
     </footer>
   </div>
 
-  <!-- PAGE: PRICING -->
-  <div id="page-pricing" class="page" style="display:none;">
-    <div class="page-content">
-      <div class="section-inner pricing-wrapper">
-        <h2 class="pricing-title">Pay per report, or keep a plan running</h2>
-        <p class="pricing-subtitle">No hidden charges. Every plan includes the same estimation engine &mdash; you&rsquo;re only choosing how many reports you need a month.</p>
 
-        <div class="pricing-table">
-          <div class="pricing-row">
-            <div class="pricing-info">
-              <div class="plan-name">Single report</div>
-              <div class="plan-desc">No sign-up commitment, buy as you go</div>
-            </div>
-            <div class="pricing-qty">1 report</div>
-            <div class="pricing-cost"><span class="price-big">&#8377;29</span><span class="price-per">/report</span></div>
-            <div class="pricing-action">
-              <button class="btn btn-outline-dark razorpay-btn" id="buy-single" data-plan="Single Report" data-price="29">Pay &#8377;29 with Razorpay</button>
-            </div>
-          </div>
-
-          <div class="pricing-row">
-            <div class="pricing-info">
-              <div class="plan-name">Starter</div>
-              <div class="plan-desc">For occasional checks</div>
-            </div>
-            <div class="pricing-qty">25 reports / month</div>
-            <div class="pricing-cost"><span class="price-big">&#8377;599</span><span class="price-per">/month</span></div>
-            <div class="pricing-action">
-              <button class="btn btn-outline-dark razorpay-btn" id="sub-starter" data-plan="Starter Plan (25 Reports/mo)" data-price="599">Subscribe &#8377;599</button>
-            </div>
-          </div>
-
-          <div class="pricing-row pricing-row-featured">
-            <div class="pricing-info">
-              <div class="plan-name">Standard</div>
-              <div class="plan-desc">For workshops &amp; small dealers</div>
-              <span class="most-picked">Most picked</span>
-            </div>
-            <div class="pricing-qty">50 reports / month</div>
-            <div class="pricing-cost"><span class="price-big">&#8377;999</span><span class="price-per">/month</span></div>
-            <div class="pricing-action">
-              <button class="btn btn-orange razorpay-btn" id="sub-standard" data-plan="Standard Plan (50 Reports/mo)" data-price="999">Subscribe &#8377;999</button>
-            </div>
-          </div>
-
-          <div class="pricing-row">
-            <div class="pricing-info">
-              <div class="plan-name">Pro</div>
-              <div class="plan-desc">For high-volume assessors</div>
-            </div>
-            <div class="pricing-qty">100 reports / month</div>
-            <div class="pricing-cost"><span class="price-big">&#8377;1,799</span><span class="price-per">/month</span></div>
-            <div class="pricing-action">
-              <button class="btn btn-outline-dark razorpay-btn" id="sub-pro" data-plan="Pro Plan (100 Reports/mo)" data-price="1799">Subscribe &#8377;1,799</button>
-            </div>
-          </div>
-
-          <div class="pricing-row">
-            <div class="pricing-info">
-              <div class="plan-name">Enterprise</div>
-              <div class="plan-desc">Fleet operators &amp; insurers</div>
-            </div>
-            <div class="pricing-qty">Unlimited</div>
-            <div class="pricing-cost"><span class="price-big">Custom</span></div>
-            <div class="pricing-action">
-              <button class="btn btn-outline-dark" id="contact-us" onclick="alert('For enterprise inquiries, please contact: piyush.gupta@repairlens.ai')">Contact us</button>
-            </div>
-          </div>
-        </div>
-
-        <div style="margin-top: 32px; padding: 16px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
-          <div style="display: flex; align-items: center; gap: 12px;">
-            <div style="width:36px; height:36px; background:#0C2340; border-radius:8px; display:flex; align-items:center; justify-content:center;">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M7 17L12 7H17L12 17H7Z" fill="#00C9A7"/></svg>
-            </div>
-            <div>
-              <div style="font-weight: 700; font-size: 14px; color: #1e293b;">Verified Razorpay Payments</div>
-              <div style="font-size: 12px; color: #64748b;">Merchant: <strong>PIYUSH GUPTA</strong> &nbsp;&bull;&nbsp; MID: <code>RMCL2XxhTCiDHJ</code></div>
-            </div>
-          </div>
-          <div style="font-size: 12px; color: #22c55e; font-weight: 600; background: #f0fdf4; padding: 6px 12px; border-radius: 20px; border: 1px solid #bbf7d0;">
-            ✓ 256-bit Encrypted Checkout
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- PAGE: SIGN IN -->
+  <!-- PAGE: SIGN IN & SIGN UP -->
   <div id="page-signin" class="page" style="display:none;">
     <div class="page-content auth-page">
-      <div class="auth-card">
-        <div class="auth-tabs">
-          <button class="auth-tab active" id="tab-signin-btn">Sign in</button>
-          <button class="auth-tab" id="tab-signup-btn">Sign up</button>
-          <button class="auth-tab" id="tab-reset-btn">Reset password</button>
+      <div class="auth-card" style="max-width:440px; width:100%; margin:0 auto; padding:32px; background:#fff; border-radius:20px; box-shadow:0 20px 40px rgba(0,0,0,0.08); border:1px solid #e2e8f0;">
+        
+        <!-- Auth Header -->
+        <div style="text-align:center; margin-bottom:24px;">
+          <div style="width:56px; height:56px; background:linear-gradient(135deg, #ff6b2b, #e8622a); border-radius:16px; display:flex; align-items:center; justify-content:center; margin:0 auto 12px auto; box-shadow:0 8px 20px rgba(232,98,42,0.25);">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" fill="#fff"/>
+            </svg>
+          </div>
+          <h2 style="font-size:22px; font-weight:800; color:#0f172a; margin-bottom:4px;" id="auth-header-title">Welcome to RepairLensAI</h2>
+          <p style="font-size:13px; color:#64748b; margin:0;" id="auth-header-subtitle">Sign in or create an account to start estimating car damage</p>
         </div>
 
-        <div id="panel-signin" class="auth-panel active">
-          <div class="form-group-auth">
-            <label for="signin-email">Email</label>
-            <input type="email" id="signin-email" class="auth-input" placeholder="you@example.com" />
-          </div>
-          <div class="form-group-auth">
-            <label for="signin-password">Password</label>
-            <input type="password" id="signin-password" class="auth-input" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;" />
-          </div>
-          <button class="btn btn-orange btn-full-auth" id="signin-submit">Sign in</button>
-          <p class="auth-foot">Forgot it? <a href="#" id="go-reset" class="auth-link">Reset password</a></p>
+        <!-- Auth Tabs Switcher (hidden during forgot password) -->
+        <div id="auth-tabs-row" style="display:flex; background:#f1f5f9; padding:4px; border-radius:12px; margin-bottom:20px;">
+          <button id="auth-tab-signin" type="button" style="flex:1; padding:10px; border:none; border-radius:8px; font-size:13px; font-weight:700; background:#fff; color:#0f172a; cursor:pointer; transition:all 0.2s;">
+            Sign In
+          </button>
+          <button id="auth-tab-signup" type="button" style="flex:1; padding:10px; border:none; border-radius:8px; font-size:13px; font-weight:700; background:transparent; color:#64748b; cursor:pointer; transition:all 0.2s;">
+            Create Account
+          </button>
         </div>
 
-        <div id="panel-signup" class="auth-panel" style="display:none;">
-          <div class="form-group-auth">
-            <label for="signup-email">Email</label>
-            <input type="email" id="signup-email" class="auth-input" placeholder="you@example.com" />
+        <!-- Alert Message Box -->
+        <div id="auth-msg" style="display:none; padding:10px 14px; border-radius:10px; font-size:13px; margin-bottom:16px; font-weight:600;"></div>
+
+        <!-- SIGN IN FORM -->
+        <form id="form-signin" style="display:block;">
+          <div style="margin-bottom:16px;">
+            <label style="font-size:12px; font-weight:700; color:#334155; display:block; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.04em;">Email Address</label>
+            <input type="email" id="signin-email" placeholder="name@example.com" required style="width:100%; padding:12px 14px; border:1px solid #cbd5e1; border-radius:10px; font-size:14px; outline:none; box-sizing:border-box;" />
           </div>
-          <div class="form-group-auth">
-            <label for="signup-password">Password</label>
-            <input type="password" id="signup-password" class="auth-input" placeholder="Choose a strong password" />
+          <div style="margin-bottom:8px;">
+            <label style="font-size:12px; font-weight:700; color:#334155; display:block; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.04em;">Password</label>
+            <input type="password" id="signin-password" placeholder="••••••••" required style="width:100%; padding:12px 14px; border:1px solid #cbd5e1; border-radius:10px; font-size:14px; outline:none; box-sizing:border-box;" />
           </div>
-          <button class="btn btn-orange btn-full-auth" id="signup-submit">Create account</button>
+          <div style="text-align:right; margin-bottom:20px;">
+            <a href="#" id="forgot-password-link" style="font-size:12px; color:#e8622a; font-weight:600; text-decoration:none;">Forgot password?</a>
+          </div>
+          <button type="submit" id="signin-btn" class="btn btn-orange" style="width:100%; justify-content:center; padding:14px; font-size:15px; font-weight:800; border-radius:12px;">
+            Sign In &rarr;
+          </button>
+        </form>
+
+        <!-- SIGN UP FORM -->
+        <form id="form-signup" style="display:none;">
+          <div style="margin-bottom:14px;">
+            <label style="font-size:12px; font-weight:700; color:#334155; display:block; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.04em;">Full Name</label>
+            <input type="text" id="signup-name" placeholder="Piyush Gupta" required style="width:100%; padding:12px 14px; border:1px solid #cbd5e1; border-radius:10px; font-size:14px; outline:none; box-sizing:border-box;" />
+          </div>
+          <div style="margin-bottom:14px;">
+            <label style="font-size:12px; font-weight:700; color:#334155; display:block; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.04em;">Phone Number</label>
+            <input type="tel" id="signup-phone" placeholder="+91 9876543210" required style="width:100%; padding:12px 14px; border:1px solid #cbd5e1; border-radius:10px; font-size:14px; outline:none; box-sizing:border-box;" />
+            <div id="signup-phone-msg" style="font-size:12px; margin-top:5px; font-weight:600; display:none;"></div>
+          </div>
+          <div style="margin-bottom:14px;">
+            <label style="font-size:12px; font-weight:700; color:#334155; display:block; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.04em;">Email Address</label>
+            <input type="email" id="signup-email" placeholder="name@example.com" required style="width:100%; padding:12px 14px; border:1px solid #cbd5e1; border-radius:10px; font-size:14px; outline:none; box-sizing:border-box;" />
+            <div id="signup-email-msg" style="font-size:12px; margin-top:5px; font-weight:600; display:none;"></div>
+          </div>
+          <div style="margin-bottom:20px;">
+            <label style="font-size:12px; font-weight:700; color:#334155; display:block; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.04em;">Password</label>
+            <input type="password" id="signup-password" placeholder="Create a strong password" required style="width:100%; padding:12px 14px; border:1px solid #cbd5e1; border-radius:10px; font-size:14px; outline:none; box-sizing:border-box;" />
+          </div>
+          <button type="submit" id="signup-btn" class="btn btn-orange" style="width:100%; justify-content:center; padding:14px; font-size:15px; font-weight:800; border-radius:12px;">
+            Create Account &rarr;
+          </button>
+        </form>
+
+        <!-- ═══════════════════════════════════════════
+             FORGOT PASSWORD — 3-STEP FLOW
+             Step 1: Enter Email → Send OTP
+             Step 2: Enter OTP → Verify
+             Step 3: Enter New Password → Reset
+        ════════════════════════════════════════════ -->
+
+        <!-- STEP 1: Enter Email -->
+        <div id="panel-forgot-email" style="display:none;">
+          <div style="text-align:center; margin-bottom:20px;">
+            <div style="width:48px; height:48px; background:#fff7ed; border-radius:12px; display:flex; align-items:center; justify-content:center; margin:0 auto 12px;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" fill="#e8622a"/></svg>
+            </div>
+            <p style="font-size:13px; color:#64748b; margin:0;">Enter your registered email address. We'll send you a 6-digit OTP.</p>
+          </div>
+          <div style="margin-bottom:16px;">
+            <label style="font-size:12px; font-weight:700; color:#334155; display:block; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.04em;">Email Address</label>
+            <input type="email" id="forgot-email-input" placeholder="name@example.com" style="width:100%; padding:12px 14px; border:1px solid #cbd5e1; border-radius:10px; font-size:14px; outline:none; box-sizing:border-box;" />
+          </div>
+          <button type="button" id="send-otp-btn" class="btn btn-orange" style="width:100%; justify-content:center; padding:14px; font-size:15px; font-weight:800; border-radius:12px;">
+            Send OTP &rarr;
+          </button>
+          <div style="text-align:center; margin-top:16px;">
+            <a href="#" id="back-to-signin-link" style="font-size:13px; color:#64748b; text-decoration:none;">← Back to Sign In</a>
+          </div>
         </div>
 
-        <div id="panel-reset" class="auth-panel" style="display:none;">
-          <div class="form-group-auth">
-            <label for="reset-email">Email</label>
-            <input type="email" id="reset-email" class="auth-input" placeholder="you@example.com" />
+        <!-- STEP 2: Enter OTP -->
+        <div id="panel-forgot-otp" style="display:none;">
+          <div style="text-align:center; margin-bottom:20px;">
+            <div style="width:48px; height:48px; background:#f0fdf4; border-radius:12px; display:flex; align-items:center; justify-content:center; margin:0 auto 12px;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z" fill="#22c55e"/></svg>
+            </div>
+            <p style="font-size:13px; color:#64748b; margin:0;">We've sent a 6-digit OTP to <strong id="otp-sent-email" style="color:#0f172a;"></strong>. Check your inbox.</p>
           </div>
-          <button class="btn btn-orange btn-full-auth" id="reset-submit">Send reset link</button>
+          <div style="margin-bottom:20px;">
+            <label style="font-size:12px; font-weight:700; color:#334155; display:block; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.04em;">Enter OTP</label>
+            <input type="text" id="otp-input" placeholder="123456" maxlength="6" inputmode="numeric"
+              style="width:100%; padding:14px; border:2px solid #e2e8f0; border-radius:10px; font-size:28px; font-weight:900; letter-spacing:12px; text-align:center; outline:none; font-family:monospace; box-sizing:border-box;" />
+          </div>
+          <button type="button" id="verify-otp-btn" class="btn btn-orange" style="width:100%; justify-content:center; padding:14px; font-size:15px; font-weight:800; border-radius:12px;">
+            Verify OTP &rarr;
+          </button>
+          <div style="text-align:center; margin-top:12px; display:flex; justify-content:center; gap:16px;">
+            <a href="#" id="resend-otp-link" style="font-size:13px; color:#e8622a; font-weight:600; text-decoration:none;">Resend OTP</a>
+            <a href="#" id="back-to-email-link" style="font-size:13px; color:#64748b; text-decoration:none;">← Change Email</a>
+          </div>
+        </div>
+
+        <!-- STEP 3: New Password -->
+        <div id="panel-forgot-newpwd" style="display:none;">
+          <div style="text-align:center; margin-bottom:20px;">
+            <div style="width:48px; height:48px; background:#eff6ff; border-radius:12px; display:flex; align-items:center; justify-content:center; margin:0 auto 12px;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z" fill="#3b82f6"/></svg>
+            </div>
+            <p style="font-size:13px; color:#64748b; margin:0;">OTP verified! ✅ Create your new password below.</p>
+          </div>
+          <div style="margin-bottom:14px;">
+            <label style="font-size:12px; font-weight:700; color:#334155; display:block; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.04em;">New Password</label>
+            <input type="password" id="new-password-input" placeholder="Minimum 6 characters" style="width:100%; padding:12px 14px; border:1px solid #cbd5e1; border-radius:10px; font-size:14px; outline:none; box-sizing:border-box;" />
+          </div>
+          <div style="margin-bottom:20px;">
+            <label style="font-size:12px; font-weight:700; color:#334155; display:block; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.04em;">Confirm New Password</label>
+            <input type="password" id="confirm-password-input" placeholder="Re-enter new password" style="width:100%; padding:12px 14px; border:1px solid #cbd5e1; border-radius:10px; font-size:14px; outline:none; box-sizing:border-box;" />
+          </div>
+          <button type="button" id="reset-password-btn" class="btn btn-orange" style="width:100%; justify-content:center; padding:14px; font-size:15px; font-weight:800; border-radius:12px;">
+            Reset Password &rarr;
+          </button>
+        </div>
+
+        <div style="text-align:center; margin-top:20px; padding-top:16px; border-top:1px solid #e2e8f0;">
+          <div style="display:flex; align-items:center; justify-content:center; gap:8px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span style="font-size:12px; color:#94a3b8;">Secured by <strong style="color:#64748b;">AWS SES &amp; Database</strong></span>
+          </div>
         </div>
       </div>
     </div>
   </div>
+
+
 
   <!-- PAGE: NEW REPORT -->
   <div id="page-report" class="page" style="display:none;">
@@ -426,16 +446,13 @@
                 <p class="preview-label" id="preview-label">Photo ready</p>
               </div>
 
+
               <button type="submit" class="btn btn-orange btn-full-report" id="form-submit-btn">
                 <span class="btn-text">Analyse &amp; Estimate Repair Cost</span>
                 <span class="btn-loader" style="display:none;">
                   <svg class="spin" width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.3)" stroke-width="3"/><path d="M12 2a10 10 0 0110 10" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg>
                   Analysing...
                 </span>
-              </button>
-
-              <button type="button" class="btn btn-outline-dark razorpay-btn" data-plan="Report Credit Token" data-price="29" style="margin-top:12px; width:100%; justify-content:center; gap:8px;">
-                💳 Pre-pay &#8377;29 via Razorpay
               </button>
             </form>
 
@@ -450,9 +467,6 @@
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 15V3m0 12l-4-4m4 4l4-4M2 17l.621 2.485A2 2 0 004.561 21h14.878a2 2 0 001.94-1.515L22 17" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                   Download PDF Report
                 </button>
-                <button class="btn btn-outline-dark razorpay-btn" type="button" data-plan="Premium Valuation Upgrade" data-price="29" style="gap:8px;">
-                  💳 Support / Unlock Pro Receipt (₹29)
-                </button>
               </div>
               <button class="btn btn-ghost-dark btn-full-report" id="reset-btn">Analyse another car</button>
             </div>
@@ -466,103 +480,36 @@
                 <path d="M15 80 L15 90 L65 90 L65 80" stroke="#9BA3AE" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
               <p>Drag your photo here<br/>or use the upload button</p>
-            </div>
+              </div>
           </div>
         </div>
       </div>
-    </div>
+    </section>
   </div>
 
-  <!-- PAYMENT CHECKOUT & COUPON MODAL -->
-  <div id="checkout-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.75); z-index:9998; align-items:center; justify-content:center; backdrop-filter:blur(6px);">
-    <div style="background:#ffffff; border-radius:20px; max-width:480px; width:92%; padding:28px; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); position:relative;">
-      <button id="close-checkout-modal" style="position:absolute; top:18px; right:18px; background:none; border:none; font-size:20px; cursor:pointer; color:#64748b;">✕</button>
-      
-      <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px;">
-        <div style="width:42px; height:42px; background:#fff7ed; border:1px solid #ffedd5; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:22px;">💳</div>
-        <div>
-          <h3 style="font-size:18px; font-weight:800; color:#0f172a; margin:0;">Razorpay Payment Checkout</h3>
-          <p style="font-size:12px; color:#64748b; margin:0;">Merchant: <strong>PIYUSH GUPTA</strong> &nbsp;&bull;&nbsp; MID: <code>RMCL2XxhTCiDHJ</code></p>
+  <!-- USER DASHBOARD MODAL -->
+  <div id="dashboard-modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); z-index:999; align-items:center; justify-content:center; padding:16px;">
+    <div style="background:#ffffff; max-width:680px; width:100%; max-height:85vh; border-radius:16px; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 20px 40px rgba(0,0,0,0.3);">
+      <div style="padding:18px 24px; background:#0b1730; color:#fff; display:flex; justify-content:space-between; align-items:center;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" stroke="#ff7a1a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <h3 style="font-size:17px; font-weight:700; margin:0;">My Dashboard & Reports History</h3>
         </div>
+        <button id="close-dashboard-btn" style="background:none; border:none; color:#94a3b8; font-size:24px; cursor:pointer; line-height:1;">&times;</button>
       </div>
-
-      <!-- Price Estimate Disclaimer Banner -->
-      <div style="background:#fffbebf0; border:1px solid #fef08a; border-radius:10px; padding:10px 14px; margin-bottom:18px; font-size:12px; color:#854d0e; display:flex; align-items:center; gap:8px;">
-        <span>⚠️</span>
-        <div><strong>Notice:</strong> This is estimate Price not fixed It Vary 15-20%.</div>
-      </div>
-
-      <!-- Plan Summary Card -->
-      <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px; margin-bottom:18px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-          <span style="font-size:13px; color:#64748b; font-weight:600;">Selected Plan:</span>
-          <strong id="modal-plan-name" style="font-size:14px; color:#0f172a;">-</strong>
+      <div style="padding:20px 24px; overflow-y:auto; flex:1;">
+        <div id="dashboard-user-info" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px; margin-bottom:20px;">
+          <!-- User info -->
         </div>
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-          <span style="font-size:13px; color:#64748b;">Original Price:</span>
-          <span id="modal-orig-price" style="font-size:14px; font-weight:700; color:#334155;">₹0</span>
+        <h4 style="font-size:14px; font-weight:700; color:#0f172a; margin-bottom:12px; text-transform:uppercase; letter-spacing:0.05em;">Your Car Damage Predictions & Uploads</h4>
+        <div id="dashboard-history-list" style="display:flex; flex-direction:column; gap:12px;">
+          <p style="color:#64748b; font-size:13px;">Loading your predictions...</p>
         </div>
-        <div id="modal-discount-row" style="display:none; justify-content:space-between; align-items:center; margin-bottom:4px; color:#16a34a;">
-          <span style="font-size:13px;">Coupon Discount:</span>
-          <span id="modal-discount-val" style="font-size:14px; font-weight:700;">-₹0</span>
-        </div>
-        <div style="border-top:1px dashed #cbd5e1; margin-top:8px; padding-top:8px; display:flex; justify-content:space-between; align-items:center;">
-          <span style="font-size:14px; font-weight:800; color:#0f172a;">Total Payable:</span>
-          <span id="modal-final-price" style="font-size:22px; font-weight:900; color:#e8622a;">₹0</span>
-        </div>
-      </div>
-
-      <!-- Coupon Input Section -->
-      <div style="margin-bottom:20px;">
-        <label style="font-size:12px; font-weight:700; color:#334155; text-transform:uppercase; letter-spacing:0.04em; display:block; margin-bottom:6px;">Have a Coupon Code?</label>
-        <div style="display:flex; gap:8px;">
-          <input type="text" id="coupon-code-input" placeholder="e.g. FIRST50, REPAIR10, CAR20" style="flex:1; padding:10px 14px; border:1px solid #cbd5e1; border-radius:10px; font-size:13px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em;" />
-          <button id="apply-coupon-btn" type="button" class="btn btn-outline-dark" style="padding:10px 18px; font-size:13px; font-weight:700;">Apply</button>
-        </div>
-        <div id="coupon-msg" style="font-size:12px; margin-top:6px; display:none;"></div>
-        
-        <!-- Quick Coupon Tags -->
-        <div style="margin-top:10px; display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
-          <span style="font-size:11px; color:#64748b; font-weight:600;">Try:</span>
-          <button type="button" class="quick-coupon-tag" data-code="FIRST50" style="font-size:11px; padding:3px 8px; border-radius:12px; background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; font-weight:700; cursor:pointer;">FIRST50 (50% OFF)</button>
-          <button type="button" class="quick-coupon-tag" data-code="REPAIR10" style="font-size:11px; padding:3px 8px; border-radius:12px; background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; font-weight:700; cursor:pointer;">REPAIR10 (10% OFF)</button>
-          <button type="button" class="quick-coupon-tag" data-code="CAR20" style="font-size:11px; padding:3px 8px; border-radius:12px; background:#fdf2f8; color:#db2777; border:1px solid #fbcfe8; font-weight:700; cursor:pointer;">CAR20 (20% OFF)</button>
-        </div>
-      </div>
-
-      <button id="proceed-razorpay-btn" type="button" class="btn btn-orange" style="width:100%; justify-content:center; padding:14px; font-size:15px; font-weight:800; border-radius:12px; gap:8px;">
-        <span>Pay via Razorpay &rarr;</span>
-      </button>
-    </div>
-  </div>
-
-  <!-- RAZORPAY PAYMENT SUCCESS MODAL -->
-  <div id="razorpay-success-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:9999; align-items:center; justify-content:center; backdrop-filter:blur(4px);">
-    <div style="background:#ffffff; border-radius:16px; max-width:480px; width:90%; padding:32px; box-shadow:0 20px 40px rgba(0,0,0,0.2); position:relative; text-align:center;">
-      <div style="width:64px; height:64px; background:#dcfce7; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 20px auto;">
-        <svg width="36" height="36" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" fill="#22c55e"/><path d="M8 12l3 3 5-5" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </div>
-      <h3 style="font-size:22px; font-weight:800; color:#0f172a; margin-bottom:8px;">Payment Successful!</h3>
-      <p style="font-size:14px; color:#64748b; margin-bottom:24px;">Thank you! Your payment via Razorpay has been processed.</p>
-      
-      <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px; text-align:left; font-size:13px; margin-bottom:24px; display:flex; flex-direction:column; gap:10px;">
-        <div style="display:flex; justify-content:space-between;"><span style="color:#64748b;">Plan:</span><strong id="rzp-receipt-plan" style="color:#0f172a;">-</strong></div>
-        <div style="display:flex; justify-content:space-between;"><span style="color:#64748b;">Amount Paid:</span><strong id="rzp-receipt-amount" style="color:#16a34a;">-</strong></div>
-        <div style="display:flex; justify-content:space-between;"><span style="color:#64748b;">Merchant Name:</span><strong style="color:#0f172a;">PIYUSH GUPTA</strong></div>
-        <div style="display:flex; justify-content:space-between;"><span style="color:#64748b;">Merchant MID:</span><code style="color:#0f172a;">RMCL2XxhTCiDHJ</code></div>
-        <div style="display:flex; justify-content:space-between;"><span style="color:#64748b;">Order ID:</span><span id="rzp-receipt-order" style="font-family:monospace; color:#334155;">-</span></div>
-        <div style="display:flex; justify-content:space-between;"><span style="color:#64748b;">Payment ID:</span><span id="rzp-receipt-payment" style="font-family:monospace; color:#334155;">-</span></div>
-      </div>
-
-      <div style="display:flex; gap:12px;">
-        <button class="btn btn-orange" id="rzp-close-modal-btn" style="flex:1;">Continue to App</button>
       </div>
     </div>
   </div>
 
-  <!-- RAZORPAY SDK -->
-  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-  <script src="app.js?v=20002"></script>
+  <script src="app.js?v=90008"></script>
 </body>
 </html>
 

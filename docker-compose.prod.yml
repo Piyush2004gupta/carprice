@@ -6,6 +6,25 @@ services:
     container_name: carbackend
     ports:
       - "8001:8000"
+    environment:
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-}
+      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET:-}
+      RAZORPAY_ACCOUNT_ID: ${RAZORPAY_ACCOUNT_ID:-acc_RMCL2XxhTCiDHJ}
+      RAZORPAY_MERCHANT_ID: ${RAZORPAY_MERCHANT_ID:-RMCL2XxhTCiDHJ}
+      RAZORPAY_PLAN_STARTER_ID: ${RAZORPAY_PLAN_STARTER_ID:-plan_ThYwyJ8SEhnLT2}
+      RAZORPAY_PLAN_STANDARD_ID: ${RAZORPAY_PLAN_STANDARD_ID:-plan_ThYz7eyDEvheTI}
+      RAZORPAY_PLAN_PRO_ID: ${RAZORPAY_PLAN_PRO_ID:-plan_ThYzrhgOX3xmzu}
+      RAZORPAY_MERCHANT_NAME: ${RAZORPAY_MERCHANT_NAME:-Dateai}
+      REPAIRLENS_DB_PATH: /data/repairlens.db
+      DYNAMODB_TABLE_NAME: ${DYNAMODB_TABLE_NAME:-users}
+      S3_BUCKET_NAME: ${S3_BUCKET_NAME:-finalcar-user-uploads-2026}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-AKIATLXAGQDQKWYORLFR}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-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}
+      AWS_REGION: ${AWS_REGION:-ap-south-1}
+      AWS_SES_SENDER_EMAIL: ${AWS_SES_SENDER_EMAIL:-pg42876914@gmail.com}
+    volumes:
+      - repairlens-data:/data
     restart: always
     networks:
       - carprice-net
@@ -24,3 +43,6 @@ services:
 networks:
   carprice-net:
     driver: bridge
+
+volumes:
+  repairlens-data:

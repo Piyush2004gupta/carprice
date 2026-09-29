@@ -10,3 +10,7 @@ torchvision
 ultralytics
 tensorflow-cpu
 razorpay
+python-jose[cryptography]
+requests
+boto3
+
