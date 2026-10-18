@@ -26,6 +26,20 @@ Create matching monthly plans in the Razorpay Dashboard. Configure a webhook to 
 
 Without Razorpay credentials, checkout deliberately returns a configuration error and does not create fake orders or grant report credits.
 
+## RapidAPI Car Damage Assessment AI Setup
+
+Vehicle damage repair cost estimation, drivability safety flags, and fraud detection are powered by the [RapidAPI Car Damage Assessment AI API](https://rapidapi.com/bilgisamapi-bilgisam-api4/api/car-damage-assessment-ai-api-repair-cost-fraud-detection).
+
+Add your RapidAPI credentials to your local `.env` file or environment:
+
+```dotenv
+RAPIDAPI_KEY=your_rapidapi_key_here
+RAPIDAPI_CAR_DAMAGE_HOST=car-damage-assessment-ai-api-repair-cost-fraud-detection.p.rapidapi.com
+```
+
+- When `RAPIDAPI_KEY` is provided, live vehicle photos are evaluated via `POST /analyze` to produce part-level repair vs replace recommendations, costs, fraud detection risk scores, and vehicle safety status.
+- When `RAPIDAPI_KEY` is omitted, the system seamlessly falls back to local automotive rule-based estimation so testing and development are never interrupted.
+
 ## Analysis flow
 
-Users must sign in and have a report credit before analysis. The backend validates the upload, runs the car classifier, skips damage models for cars classified as undamaged, then runs detection, segmentation, and `price.keras` for damaged vehicles. A failed/non-car analysis returns its reserved credit. Missing required model weights are reported explicitly rather than replaced with sample results.
+Users must sign in and have a report credit before analysis. The backend validates the upload, runs the car classifier, skips damage models for cars classified as undamaged, then runs detection, segmentation, and price estimation for damaged vehicles. A failed/non-car analysis returns its reserved credit. Missing required model weights are reported explicitly rather than replaced with sample results.

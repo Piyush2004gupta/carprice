@@ -20,6 +20,26 @@ import re
 
 logging.basicConfig(level=logging.INFO)
 
+# Auto-load .env file from backend or root directory
+def _load_env_file():
+    candidates = [
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"),
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env"),
+    ]
+    for p in candidates:
+        if os.path.exists(p):
+            try:
+                with open(p, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if line and not line.startswith("#") and "=" in line:
+                            k, v = line.split("=", 1)
+                            os.environ.setdefault(k.strip(), v.strip())
+            except Exception as e:
+                logging.warning(f"Could not read .env from {p}: {e}")
+
+_load_env_file()
+
 app = FastAPI(title="RepairLensAI Backend")
 
 app.add_middleware(

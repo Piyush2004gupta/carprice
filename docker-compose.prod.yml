@@ -16,6 +16,8 @@ services:
       RAZORPAY_PLAN_STANDARD_ID: ${RAZORPAY_PLAN_STANDARD_ID:-plan_ThYz7eyDEvheTI}
       RAZORPAY_PLAN_PRO_ID: ${RAZORPAY_PLAN_PRO_ID:-plan_ThYzrhgOX3xmzu}
       RAZORPAY_MERCHANT_NAME: ${RAZORPAY_MERCHANT_NAME:-Dateai}
+      RAPIDAPI_KEY: ${RAPIDAPI_KEY:-}
+      RAPIDAPI_CAR_DAMAGE_HOST: ${RAPIDAPI_CAR_DAMAGE_HOST:-car-damage-assessment-ai-api-repair-cost-fraud-detection.p.rapidapi.com}
       REPAIRLENS_DB_PATH: /data/repairlens.db
       DYNAMODB_TABLE_NAME: ${DYNAMODB_TABLE_NAME:-users}
       S3_BUCKET_NAME: ${S3_BUCKET_NAME:-finalcar-user-uploads-2026}

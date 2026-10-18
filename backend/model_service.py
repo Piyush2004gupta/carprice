@@ -3,6 +3,7 @@ import logging
 import base64
 from io import BytesIO
 from PIL import Image
+import requests
 
 try:
     from ultralytics import YOLO
@@ -12,15 +13,6 @@ except ImportError:
     ULTRALYTICS_AVAILABLE = False
     logging.warning("ultralytics package not found. Models will not be loaded.")
 
-try:
-    import tensorflow as tf
-    TF_AVAILABLE = True
-    class CustomDense(tf.keras.layers.Dense):
-        def __init__(self, *args, quantization_config=None, **kwargs):
-            super().__init__(*args, **kwargs)
-except ImportError:
-    TF_AVAILABLE = False
-    logging.warning("tensorflow package not found.")
 
 try:
     import torch
@@ -36,8 +28,35 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DAMAGE_DETECT_PATH = os.path.join(BASE_DIR, "cardetection1.pt")
 DAMAGE_SEG_PATH = os.path.join(BASE_DIR, "segmentation1.pt")
 PARTS_SEG_PATH = os.path.join(BASE_DIR, "exp.pt")
-PRICE_MODEL_PATH = os.path.join(BASE_DIR, "price.keras")
 CAR_DAMAGE_CLASSIFIER_PATH = os.path.join(BASE_DIR, "car_damage_classifier_pt_best.pt")
+
+# Auto-load .env file if present
+def _load_env_file():
+    candidates = [
+        os.path.join(BASE_DIR, ".env"),
+        os.path.join(BASE_DIR, "..", ".env"),
+    ]
+    for p in candidates:
+        if os.path.exists(p):
+            try:
+                with open(p, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if line and not line.startswith("#") and "=" in line:
+                            k, v = line.split("=", 1)
+                            os.environ.setdefault(k.strip(), v.strip())
+            except Exception:
+                pass
+
+_load_env_file()
+
+# RapidAPI Car Damage Assessment AI API configuration
+RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY", "")
+RAPIDAPI_CAR_DAMAGE_HOST = os.getenv(
+    "RAPIDAPI_CAR_DAMAGE_HOST",
+    "car-damage-assessment-ai-api-repair-cost-fraud-detection.p.rapidapi.com"
+)
+RAPIDAPI_CAR_DAMAGE_URL = f"https://{RAPIDAPI_CAR_DAMAGE_HOST}/analyze"
 
 # Dataset Categorical Constants
 BRANDS = [
@@ -234,7 +253,6 @@ class ModelService:
         self.damage_detect = None
         self.damage_seg = None
         self.parts_seg = None
-        self.price_model = None
         self.car_damage_classifier_model = None
         self.transform = None
 
@@ -272,140 +290,306 @@ class ModelService:
                 except Exception as e:
                     logging.error(f"Error loading YOLO models: {e}")
 
-        if self.price_model is None:
-            if TF_AVAILABLE and os.path.exists(PRICE_MODEL_PATH):
-                try:
-                    self.price_model = self._load_keras_model_safe(PRICE_MODEL_PATH)
-                    logging.info("Keras price.keras model loaded successfully.")
-                except Exception as e:
-                    logging.error(f"Error loading Keras price model: {e}")
-
-    def _load_keras_model_safe(self, model_path):
-        import zipfile
-        import tempfile
-        import json
-
-        def remove_quant_keys(obj):
-            if isinstance(obj, dict):
-                obj.pop("quantization_config", None)
-                for k, v in list(obj.items()):
-                    remove_quant_keys(v)
-            elif isinstance(obj, list):
-                for item in obj:
-                    remove_quant_keys(item)
-
-        try:
-            return tf.keras.models.load_model(model_path, compile=False)
-        except Exception as e:
-            logging.warning(f"Standard keras load failed ({e}), attempting config sanitization...")
-            temp_dir = tempfile.mkdtemp()
-            clean_path = os.path.join(temp_dir, "price_clean.keras")
-            with zipfile.ZipFile(model_path, 'r') as zin, zipfile.ZipFile(clean_path, 'w') as zout:
-                for item in zin.infolist():
-                    data = zin.read(item.filename)
-                    if item.filename == 'config.json':
-                        try:
-                            cfg = json.loads(data.decode('utf-8'))
-                            remove_quant_keys(cfg)
-                            data = json.dumps(cfg).encode('utf-8')
-                        except Exception:
-                            s = data.decode('utf-8').replace('"quantization_config": null', '').replace('"quantization_config":null', '')
-                            data = s.encode('utf-8')
-                    zout.writestr(item, data)
-            return tf.keras.models.load_model(clean_path, compile=False)
-
-    def predict_combined_price(self, car_brand, car_model, car_variant, car_type, year, detections_raw):
-        self._ensure_models_loaded()
+    def predict_combined_price(self, car_brand, car_model, car_variant, car_type, year, detections_raw, image_bytes=None):
         """
-        Run price.keras once for all detected damages combined.
-                Input features expected by price.keras:
-                    [brand_idx, model_idx, variant_idx, fuel_idx, year_idx,
-                     damage_count, avg_damage_cls, avg_part_cls]
-        Output (14 targets):
-          total_oem_part_price, total_aftermarket_part_price,
-          total_damage_labour, total_damage_installation, total_damage_paint,
-          gst_rate,
-          oem_subtotal_before_gst, oem_gst_amount, oem_total_estimate,
-          aftermarket_subtotal_before_gst, aftermarket_gst_amount, aftermarket_total_estimate,
-          repair_item_count, replacement_item_count
+        Calculates damage repair costs using RapidAPI Car Damage Assessment AI API:
+        https://rapidapi.com/bilgisamapi-bilgisam-api4/api/car-damage-assessment-ai-api-repair-cost-fraud-detection
+        Falls back to rule-based automotive cost calculation if RAPIDAPI_KEY is not set or API fails.
         """
-        import numpy as np
-
-        if self.price_model is None:
-            raise RuntimeError("price.keras model is not loaded!")
-
-        b_idx = BRANDS.index(car_brand)     if car_brand    in BRANDS     else 0
-        m_idx = CAR_MODELS.index(car_model) if car_model    in CAR_MODELS else 0
-        v_idx = VARIANTS.index(car_variant) if car_variant  in VARIANTS   else 0
-        t_idx = FUEL_TYPES.index(car_type)  if car_type     in FUEL_TYPES else 0
-        y_idx = YEARS.index(int(year))      if (year is not None and int(year) in YEARS) else max(0, int(year) - 2010 if year else 10)
-
-        n = len(detections_raw)
-        if n == 0:
+        if not detections_raw:
             return None
 
-        avg_d = sum(d["damage_cls_id"] for d in detections_raw) / n
-        avg_p = sum(d["part_cls_id"]   for d in detections_raw) / n
-        feature_vec = np.array(
-            [[b_idx, m_idx, v_idx, t_idx, y_idx, n, avg_d, avg_p]],
-            dtype=np.float32
+        # 1. Try RapidAPI if image_bytes and RAPIDAPI_KEY are provided
+        api_key = os.getenv("RAPIDAPI_KEY", "").strip()
+        if image_bytes and api_key:
+            api_res = self._call_rapidapi_damage_assessment(
+                image_bytes=image_bytes,
+                filename=f"{car_brand}_{car_model}.jpg",
+                make=car_brand,
+                model=car_model,
+                year=str(year) if year else "",
+                currency="INR",
+            )
+            if api_res:
+                parsed = self._parse_rapidapi_response(api_res, detections_raw)
+                if parsed and (parsed.get("oem_total_estimate", 0) > 0 or parsed.get("aftermarket_total_estimate", 0) > 0):
+                    return parsed
+
+        # 2. Heuristic fallback when RapidAPI is not configured or unavailable
+        return self._calculate_fallback_price(
+            detections_raw=detections_raw,
+            car_brand=car_brand,
+            car_model=car_model,
+            year=year,
         )
 
-        raw = self.price_model.predict(feature_vec, verbose=0)[0]
+    def _call_rapidapi_damage_assessment(self, image_bytes: bytes, filename: str = "car.jpg", make: str = "", model: str = "", year: str = "", currency: str = "INR"):
+        api_key = os.getenv("RAPIDAPI_KEY", "").strip()
+        if not api_key:
+            return None
 
-        replacement_classes = {3, 4, 5}  # 3: glass shatter, 4: lamp broken, 5: tire flat
+        headers = {
+            "X-RapidAPI-Key": api_key,
+            "X-RapidAPI-Host": RAPIDAPI_CAR_DAMAGE_HOST,
+        }
+        files = {
+            "image": (filename or "car.jpg", image_bytes, "image/jpeg")
+        }
+        data = {
+            "make": make or "",
+            "model": model or "",
+            "year": str(year) if year else "",
+            "currency": currency or "INR",
+            "country": "IN",
+            "language": "en",
+        }
+
+        try:
+            logging.info(f"Calling RapidAPI Car Damage Assessment ({RAPIDAPI_CAR_DAMAGE_HOST})...")
+            resp = requests.post(RAPIDAPI_CAR_DAMAGE_URL, headers=headers, files=files, data=data, timeout=45)
+            if resp.status_code == 200:
+                logging.info("RapidAPI car damage assessment succeeded.")
+                return resp.json()
+            else:
+                logging.warning(f"RapidAPI call returned status {resp.status_code}: {resp.text[:300]}")
+                return None
+        except Exception as e:
+            logging.error(f"Error calling RapidAPI car damage assessment: {e}")
+            return None
+
+    def _parse_rapidapi_response(self, api_res, detections_raw):
+        if not isinstance(api_res, dict):
+            return None
+
+        # The documentation schema wraps data in result: { vehicle, damages, costSummary, safety, fraudRiskScore, recommendation }
+        res_data = api_res.get("result") if isinstance(api_res.get("result"), dict) else api_res
+
+        cost_summary = (
+            res_data.get("costSummary")
+            or res_data.get("repair_cost")
+            or res_data.get("cost_estimate")
+            or res_data.get("costs")
+            or {}
+        )
+
+        # Parts: { "min": 260, "max": 480 }
+        parts_obj = cost_summary.get("parts")
+        if isinstance(parts_obj, dict):
+            parts_max = float(parts_obj.get("max", 0.0) or parts_obj.get("estimate", 0.0))
+            parts_min = float(parts_obj.get("min", 0.0))
+        elif isinstance(parts_obj, (int, float)):
+            parts_max = float(parts_obj)
+            parts_min = parts_max * 0.72
+        else:
+            parts_max = float(cost_summary.get("parts_max", cost_summary.get("parts_estimate", 0.0)))
+            parts_min = float(cost_summary.get("parts_min", parts_max * 0.72))
+
+        # Labor: { "min": 300, "max": 450 }
+        labor_obj = cost_summary.get("labor") or cost_summary.get("labour")
+        if isinstance(labor_obj, dict):
+            labour_val = float(labor_obj.get("max", 0.0) or labor_obj.get("estimate", 0.0))
+        elif isinstance(labor_obj, (int, float)):
+            labour_val = float(labor_obj)
+        else:
+            labour_val = float(cost_summary.get("labor_max", cost_summary.get("labor_estimate", 0.0)))
+
+        # Paint: { "min": 110, "max": 230 }
+        paint_obj = cost_summary.get("paint")
+        if isinstance(paint_obj, dict):
+            paint_val = float(paint_obj.get("max", 0.0) or paint_obj.get("estimate", 0.0))
+        elif isinstance(paint_obj, (int, float)):
+            paint_val = float(paint_obj)
+        else:
+            paint_val = float(cost_summary.get("paint_max", cost_summary.get("paint_estimate", 0.0)))
+
+        # Total: { "min": 670, "max": 1160 }
+        total_obj = cost_summary.get("total")
+        if isinstance(total_obj, dict):
+            total_max = float(total_obj.get("max", 0.0))
+            total_min = float(total_obj.get("min", 0.0))
+        elif isinstance(total_obj, (int, float)):
+            total_max = float(total_obj)
+            total_min = total_max * 0.75
+        else:
+            total_max = float(cost_summary.get("total_max", cost_summary.get("total_estimate", 0.0)))
+            total_min = float(cost_summary.get("total_min", total_max * 0.75))
+
+        # Damages list: [ { id, part, type, severity, repairAction, laborHours, costEstimate } ]
+        damages_list = res_data.get("damages", [])
         replace_count = 0
         repair_count = 0
-        for d in detections_raw:
-            cls_id = d.get("damage_cls_id", 0)
-            conf   = d.get("confidence", 0.0)
-            if cls_id in replacement_classes or (cls_id == 2 and conf >= 0.75):
-                replace_count += 1
-            else:
-                repair_count += 1
+        total_labor_hours = 0.0
 
-        if repair_count == 0 and replace_count == 0 and n > 0:
-            repair_count = n
+        if isinstance(damages_list, list) and damages_list:
+            for dmg in damages_list:
+                act = str(dmg.get("repairAction", "") or dmg.get("action", "")).lower()
+                if "replace" in act:
+                    replace_count += 1
+                else:
+                    repair_count += 1
+                total_labor_hours += float(dmg.get("laborHours", 0.0) or 0.0)
+        else:
+            replacement_classes = {3, 4, 5}
+            for d in detections_raw:
+                if d.get("damage_cls_id", 0) in replacement_classes or (d.get("damage_cls_id", 0) == 2 and d.get("confidence", 0) >= 0.75):
+                    replace_count += 1
+                else:
+                    repair_count += 1
 
-        # price.keras outputs are scaled in Thousands of Rupees (e.g. 10.84 = ₹10,840)
-        # Replacement parts & installation charges apply ONLY when there are replacement items
-        oem_part = max(0, int(round(float(raw[0]) * 1000.0))) if replace_count > 0 else 0
-        afm_part = max(0, int(round(float(raw[1]) * 1000.0))) if replace_count > 0 else 0
-        install  = max(0, int(round(max(0.0, float(raw[3])) * 1000.0))) if replace_count > 0 else 0
+        if repair_count == 0 and replace_count == 0 and len(detections_raw) > 0:
+            repair_count = len(detections_raw)
 
-        # Repair labour charges apply ONLY when there are repair items
-        labour   = max(0, int(round(abs(float(raw[2])) * 1000.0))) if repair_count > 0 else 0
+        # Installation for replaced parts
+        install_val = float(cost_summary.get("installation", 800 * replace_count if replace_count > 0 else 0))
 
-        # Only assign paint cost if detected damages include paintable body panel items (dent=0, scratch=1, crack=2)
-        needs_paint = any(d.get("damage_cls_id", 0) in {0, 1, 2} for d in detections_raw)
-        paint       = max(0, int(round(max(0.0, float(raw[4])) * 1000.0))) if needs_paint else 0
-
-        raw_gst  = float(raw[5])
-        gst_rate = 0.18 if (raw_gst <= 0.05 or raw_gst > 0.5) else round(raw_gst, 4)
+        oem_part = max(0, int(round(parts_max)))
+        afm_part = max(0, int(round(parts_min if parts_min > 0 else parts_max * 0.72)))
+        labour = max(0, int(round(labour_val)))
+        paint = max(0, int(round(paint_val)))
+        install = max(0, int(round(install_val)))
+        gst_rate = 0.18
 
         oem_subtotal = oem_part + labour + install + paint
-        oem_gst      = int(round(oem_subtotal * gst_rate))
-        oem_total    = oem_subtotal + oem_gst
+        # If parts/labor breakdown was 0 but total range was given
+        if oem_subtotal == 0 and total_max > 0:
+            oem_subtotal = int(round(total_max / 1.18))
+            oem_part = int(round(oem_subtotal * 0.45))
+            afm_part = int(round(oem_part * 0.72))
+            labour = int(round(oem_subtotal * 0.30))
+            paint = int(round(oem_subtotal * 0.25))
+
+        oem_gst = int(round(oem_subtotal * gst_rate))
+        oem_total = oem_subtotal + oem_gst
 
         afm_subtotal = afm_part + labour + install + paint
-        afm_gst      = int(round(afm_subtotal * gst_rate))
-        afm_total    = afm_subtotal + afm_gst
+        afm_gst = int(round(afm_subtotal * gst_rate))
+        afm_total = afm_subtotal + afm_gst
+
+        # Fraud & Safety info directly matching schema
+        fraud_score = res_data.get("fraudRiskScore")
+        fraud_indicators = res_data.get("fraudIndicators", [])
+
+        safety_obj = res_data.get("safety") or {}
+        drivable = safety_obj.get("drivable", True)
+        airbags_deployed = safety_obj.get("airbagsDeployed", False)
+        structural_concerns = res_data.get("structuralConcerns", [])
+
+        recommendation = res_data.get("recommendation") or {}
+        needs_inspection = recommendation.get("needsPhysicalInspection", False)
+        next_step = recommendation.get("nextStep", "")
+
+        vehicle_info = res_data.get("vehicle") or {}
 
         return {
-            "total_oem_part_price":              oem_part,
-            "total_aftermarket_part_price":      afm_part,
-            "total_damage_labour":               labour,
-            "total_damage_installation":         install,
-            "total_damage_paint":                paint,
-            "gst_rate":                          gst_rate,
-            "oem_subtotal_before_gst":           oem_subtotal,
-            "oem_gst_amount":                    oem_gst,
-            "oem_total_estimate":                oem_total,
-            "aftermarket_subtotal_before_gst":   afm_subtotal,
-            "aftermarket_gst_amount":            afm_gst,
-            "aftermarket_total_estimate":        afm_total,
-            "repair_item_count":                 repair_count,
-            "replacement_item_count":            replace_count,
+            "total_oem_part_price": oem_part,
+            "total_aftermarket_part_price": afm_part,
+            "total_damage_labour": labour,
+            "total_damage_installation": install,
+            "total_damage_paint": paint,
+            "gst_rate": gst_rate,
+            "oem_subtotal_before_gst": oem_subtotal,
+            "oem_gst_amount": oem_gst,
+            "oem_total_estimate": oem_total,
+            "aftermarket_subtotal_before_gst": afm_subtotal,
+            "aftermarket_gst_amount": afm_gst,
+            "aftermarket_total_estimate": afm_total,
+            "repair_item_count": repair_count,
+            "replacement_item_count": replace_count,
+            "currency": cost_summary.get("currency", "INR"),
+            "fraud_risk_score": fraud_score,
+            "fraud_indicators": fraud_indicators,
+            "drivable": drivable,
+            "airbags_deployed": airbags_deployed,
+            "structural_concerns": structural_concerns,
+            "estimated_labor_hours": round(total_labor_hours, 1) if total_labor_hours > 0 else None,
+            "needs_physical_inspection": needs_inspection,
+            "recommendation_next_step": next_step,
+            "detected_vehicle": vehicle_info,
+            "source": "RapidAPI Car Damage Assessment AI",
+        }
+
+    def _calculate_fallback_price(self, detections_raw, car_brand="", car_model="", year=None):
+        if not detections_raw:
+            return None
+
+        replacement_classes = {3, 4, 5}
+        replace_count = 0
+        repair_count = 0
+        oem_part = 0
+        labour = 0
+        paint = 0
+        install = 0
+
+        for d in detections_raw:
+            cls_id = d.get("damage_cls_id", 0)
+            conf = d.get("confidence", 0.5)
+
+            is_replace = cls_id in replacement_classes or (cls_id == 2 and conf >= 0.75)
+            if is_replace:
+                replace_count += 1
+                if cls_id == 3:
+                    part_cost = 6500
+                    install_cost = 1200
+                elif cls_id == 4:
+                    part_cost = 4500
+                    install_cost = 800
+                elif cls_id == 5:
+                    part_cost = 4000
+                    install_cost = 500
+                else:
+                    part_cost = 5500
+                    install_cost = 1000
+                oem_part += part_cost
+                install += install_cost
+            else:
+                repair_count += 1
+                if cls_id == 0:
+                    labour += 1800
+                    paint += 2200
+                elif cls_id == 1:
+                    labour += 1000
+                    paint += 1800
+                elif cls_id == 2:
+                    labour += 1500
+                    paint += 2000
+                else:
+                    labour += 1200
+
+        if repair_count == 0 and replace_count == 0:
+            repair_count = len(detections_raw)
+            labour = repair_count * 1200
+
+        afm_part = int(round(oem_part * 0.72))
+        gst_rate = 0.18
+
+        oem_subtotal = oem_part + labour + install + paint
+        oem_gst = int(round(oem_subtotal * gst_rate))
+        oem_total = oem_subtotal + oem_gst
+
+        afm_subtotal = afm_part + labour + install + paint
+        afm_gst = int(round(afm_subtotal * gst_rate))
+        afm_total = afm_subtotal + afm_gst
+
+        return {
+            "total_oem_part_price": oem_part,
+            "total_aftermarket_part_price": afm_part,
+            "total_damage_labour": labour,
+            "total_damage_installation": install,
+            "total_damage_paint": paint,
+            "gst_rate": gst_rate,
+            "oem_subtotal_before_gst": oem_subtotal,
+            "oem_gst_amount": oem_gst,
+            "oem_total_estimate": oem_total,
+            "aftermarket_subtotal_before_gst": afm_subtotal,
+            "aftermarket_gst_amount": afm_gst,
+            "aftermarket_total_estimate": afm_total,
+            "repair_item_count": repair_count,
+            "replacement_item_count": replace_count,
+            "currency": "INR",
+            "fraud_risk_score": None,
+            "drivable": True if replace_count <= 1 else False,
+            "structural_damage": False,
+            "source": "Rule-based estimation (Configure RAPIDAPI_KEY for live RapidAPI assessment)",
         }
 
     def _img_to_base64(self, img_array):
@@ -443,8 +627,6 @@ class ModelService:
             missing_models.append("cardetection1.pt")
         if self.damage_seg is None:
             missing_models.append("segmentation1.pt")
-        if self.price_model is None:
-            missing_models.append("price.keras")
         if missing_models:
             result["success"] = False
             result["message"] = "Required model(s) unavailable: " + ", ".join(missing_models)
@@ -561,9 +743,9 @@ class ModelService:
 
             result["combined_b64"] = self._img_to_base64(comb)
 
-            # 5. Extract structured detections list (no per-damage price — price.keras runs once)
+            # 5. Extract structured detections list (for damage price API aggregation)
             detections_list = []
-            detections_raw   = []   # for price.keras input aggregation
+            detections_raw   = []   # for damage price API input aggregation
 
             def append_detections(res, model_type):
                 if res is None or len(res.boxes) == 0:
@@ -597,9 +779,14 @@ class ModelService:
 
             result["detections"] = detections_list
 
-            # ── Run price.keras ONCE for all damages combined ────────────────
+            # ── Run Car Damage Assessment API for all damages combined ────────────────
             combined_price = None
             if len(detections_raw) > 0:
+                # Prepare image bytes for RapidAPI call
+                img_buf = BytesIO()
+                image.convert("RGB").save(img_buf, format="JPEG")
+                img_bytes = img_buf.getvalue()
+
                 combined_price = self.predict_combined_price(
                     car_brand=car_brand,
                     car_model=car_model,
@@ -607,6 +794,7 @@ class ModelService:
                     car_type=car_type,
                     year=year,
                     detections_raw=detections_raw,
+                    image_bytes=img_bytes,
                 )
             result["combined_price"] = combined_price
 

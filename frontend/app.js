@@ -1252,6 +1252,48 @@ function createCombinedPriceCard(cp, detections) {
     </span>
   `).join("");
 
+  // RapidAPI Extra Insights: Fraud Risk Score, Safety & Drivability
+  const fraudScore = (cp.fraud_risk_score !== null && cp.fraud_risk_score !== undefined) ? Number(cp.fraud_risk_score) : null;
+  const fraudBadgeHTML = fraudScore !== null ? `
+    <span style="font-size:11px; padding:6px 14px; border-radius:20px; background:${fraudScore <= 30 ? '#f0fdf4' : fraudScore <= 60 ? '#fefce8' : '#fef2f2'}; color:${fraudScore <= 30 ? '#15803d' : fraudScore <= 60 ? '#a16207' : '#b91c1c'}; border:1px solid ${fraudScore <= 30 ? '#86efac' : fraudScore <= 60 ? '#fef08a' : '#fecaca'}; font-weight:800; display:inline-flex; align-items:center; gap:6px;">
+      🛡️ Fraud Risk: ${fraudScore}/100 (${fraudScore <= 30 ? 'Low Risk' : fraudScore <= 60 ? 'Moderate Risk' : 'High Risk'})
+    </span>` : '';
+
+  const drivableBadgeHTML = (cp.drivable !== undefined && cp.drivable !== null) ? `
+    <span style="font-size:11px; padding:6px 14px; border-radius:20px; background:${cp.drivable ? '#f0fdf4' : '#fef2f2'}; color:${cp.drivable ? '#15803d' : '#b91c1c'}; border:1px solid ${cp.drivable ? '#86efac' : '#fecaca'}; font-weight:800; display:inline-flex; align-items:center; gap:6px;">
+      ${cp.drivable ? '🚗 Vehicle is Drivable' : '⚠️ Vehicle Not Drivable'}
+    </span>` : '';
+
+  const laborHoursBadgeHTML = cp.estimated_labor_hours ? `
+    <span style="font-size:11px; padding:6px 14px; border-radius:20px; background:#f0f9ff; color:#0369a1; border:1px solid #bae6fd; font-weight:800; display:inline-flex; align-items:center; gap:6px;">
+      ⏱️ Est. Labor: ${cp.estimated_labor_hours} hrs
+    </span>` : '';
+
+  const airbagBadgeHTML = cp.airbags_deployed ? `
+    <span style="font-size:11px; padding:6px 14px; border-radius:20px; background:#fef2f2; color:#b91c1c; border:1px solid #fecaca; font-weight:800; display:inline-flex; align-items:center; gap:6px;">
+      💥 Airbags Deployed
+    </span>` : '';
+
+  const inspectionBadgeHTML = cp.needs_physical_inspection ? `
+    <span style="font-size:11px; padding:6px 14px; border-radius:20px; background:#fff7ed; color:#c2410c; border:1px solid #fed7aa; font-weight:800; display:inline-flex; align-items:center; gap:6px;">
+      ⚠️ Physical Inspection Required
+    </span>` : '';
+
+  const recommendationHTML = cp.recommendation_next_step ? `
+    <div style="background:#f8fafc; border:1px solid #cbd5e1; border-left:4px solid #3b82f6; border-radius:8px; padding:10px 14px; font-size:12px; color:#334155; line-height:1.5;">
+      <strong>AI Next Step:</strong> ${cp.recommendation_next_step}
+    </div>` : '';
+
+  const aiInsightsHTML = (fraudBadgeHTML || drivableBadgeHTML || laborHoursBadgeHTML || airbagBadgeHTML || inspectionBadgeHTML) ? `
+    <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:2px;">
+      ${drivableBadgeHTML}
+      ${fraudBadgeHTML}
+      ${laborHoursBadgeHTML}
+      ${airbagBadgeHTML}
+      ${inspectionBadgeHTML}
+    </div>
+    ${recommendationHTML}` : '';
+
   const box = document.createElement("div");
   box.className = "combined-price-card";
   box.style.cssText = "background:#ffffff; border:1px solid #e2e8f0; border-radius:16px; padding:24px; box-shadow:0 4px 20px rgba(0,0,0,0.04); display:flex; flex-direction:column; gap:18px;";
@@ -1272,6 +1314,9 @@ function createCombinedPriceCard(cp, detections) {
         💰 Aftermarket saves ₹${fmt(savings)}
       </span>` : ''}
     </div>
+
+    <!-- AI Assessment Insights (RapidAPI) -->
+    ${aiInsightsHTML}
 
     <!-- Big Totals -->
     <div class="price-totals-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
@@ -1322,10 +1367,15 @@ function createCombinedPriceCard(cp, detections) {
       <div style="display:flex;flex-wrap:wrap;gap:8px;">${damageBadgesHTML}</div>
     </div>
 
-    <!-- Estimate Disclaimer Notice -->
+    <!-- Estimate Disclaimer & Source -->
     <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:10px; padding:14px 16px; margin-top:6px; display:flex; align-items:center; gap:12px; font-size:13px; color:#92400e; line-height:1.5;">
       <span style="font-size:20px; flex-shrink:0;">⚠️</span>
       <div><strong style="color:#78350f;">Notice:</strong> This is an estimate price (varies 15–20%). Final repair cost may vary based on garage labor rates and local spare parts availability.</div>
+    </div>
+
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; font-size:11px; color:#64748b; padding-top:4px;">
+      <span>⚡ Assessment Engine: <strong>${cp.source || 'RapidAPI Car Damage Assessment AI'}</strong></span>
+      ${cp.currency ? `<span style="font-weight:700; color:#475569;">Currency: ${cp.currency}</span>` : ''}
     </div>
   `;
   return box;
@@ -1432,7 +1482,7 @@ function showResult(data) {
         </div>
       `;
     } else {
-      // Render the single combined price card from backend price.keras result
+      // Render the single combined price card from backend price API result
       const combinedCard = createCombinedPriceCard(res.combined_price, detections);
       if (combinedCard) dashSection.appendChild(combinedCard);
 

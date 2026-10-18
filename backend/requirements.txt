@@ -8,7 +8,6 @@ opencv-python-headless
 torch
 torchvision
 ultralytics
-tensorflow-cpu
 razorpay
 python-jose[cryptography]
 requests
