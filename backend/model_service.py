@@ -293,18 +293,15 @@ class ModelService:
     def predict_combined_price(self, car_brand, car_model, car_variant, car_type, year, detections_raw, image_bytes=None):
         """
         Calculates damage repair costs using RapidAPI Car Damage Assessment AI API:
-        https://rapidapi.com/bilgisamapi-bilgisam-api4/api/car-damage-assessment-ai-api-repair-cost-fraud-detection
+        https://car-damage-assessment-ai-api-repair-cost-fraud-detection.p.rapidapi.com/analyze
         Falls back to rule-based automotive cost calculation if RAPIDAPI_KEY is not set or API fails.
         """
-        if not detections_raw:
-            return None
-
         # 1. Try RapidAPI if image_bytes and RAPIDAPI_KEY are provided
         api_key = os.getenv("RAPIDAPI_KEY", "").strip()
         if image_bytes and api_key:
             api_res = self._call_rapidapi_damage_assessment(
                 image_bytes=image_bytes,
-                filename=f"{car_brand}_{car_model}.jpg",
+                filename=f"{car_brand}_{car_model}.jpg" if car_brand or car_model else "car.jpg",
                 make=car_brand,
                 model=car_model,
                 year=str(year) if year else "",
@@ -312,16 +309,18 @@ class ModelService:
             )
             if api_res:
                 parsed = self._parse_rapidapi_response(api_res, detections_raw)
-                if parsed and (parsed.get("oem_total_estimate", 0) > 0 or parsed.get("aftermarket_total_estimate", 0) > 0):
+                if parsed:
                     return parsed
 
-        # 2. Heuristic fallback when RapidAPI is not configured or unavailable
-        return self._calculate_fallback_price(
-            detections_raw=detections_raw,
-            car_brand=car_brand,
-            car_model=car_model,
-            year=year,
-        )
+        # 2. Heuristic fallback when RapidAPI is not configured or fails
+        if detections_raw:
+            return self._calculate_fallback_price(
+                detections_raw=detections_raw,
+                car_brand=car_brand,
+                car_model=car_model,
+                year=year,
+            )
+        return None
 
     def _call_rapidapi_damage_assessment(self, image_bytes: bytes, filename: str = "car.jpg", make: str = "", model: str = "", year: str = "", currency: str = "INR"):
         api_key = os.getenv("RAPIDAPI_KEY", "").strip()
@@ -336,17 +335,20 @@ class ModelService:
             "image": (filename or "car.jpg", image_bytes, "image/jpeg")
         }
         data = {
-            "make": make or "",
-            "model": model or "",
-            "year": str(year) if year else "",
             "currency": currency or "INR",
             "country": "IN",
             "language": "en",
         }
+        if make and make.strip():
+            data["make"] = make.strip()
+        if model and model.strip():
+            data["model"] = model.strip()
+        if year and str(year).strip():
+            data["year"] = str(year).strip()
 
         try:
             logging.info(f"Calling RapidAPI Car Damage Assessment ({RAPIDAPI_CAR_DAMAGE_HOST})...")
-            resp = requests.post(RAPIDAPI_CAR_DAMAGE_URL, headers=headers, files=files, data=data, timeout=45)
+            resp = requests.post(RAPIDAPI_CAR_DAMAGE_URL, headers=headers, files=files, data=data, timeout=60)
             if resp.status_code == 200:
                 logging.info("RapidAPI car damage assessment succeeded.")
                 return resp.json()
@@ -504,7 +506,13 @@ class ModelService:
             "estimated_labor_hours": round(total_labor_hours, 1) if total_labor_hours > 0 else None,
             "needs_physical_inspection": needs_inspection,
             "recommendation_next_step": next_step,
+            "recommendation_reason": recommendation.get("reason", ""),
             "detected_vehicle": vehicle_info,
+            "image_quality": res_data.get("imageQuality"),
+            "cost_summary": cost_summary,
+            "total_loss_likely": cost_summary.get("totalLossLikely", False),
+            "damages": damages_list,
+            "overall_confidence": res_data.get("overallConfidence"),
             "source": "RapidAPI Car Damage Assessment AI",
         }
 
@@ -781,22 +789,41 @@ class ModelService:
 
             # ── Run Car Damage Assessment API for all damages combined ────────────────
             combined_price = None
-            if len(detections_raw) > 0:
-                # Prepare image bytes for RapidAPI call
-                img_buf = BytesIO()
-                image.convert("RGB").save(img_buf, format="JPEG")
-                img_bytes = img_buf.getvalue()
+            img_buf = BytesIO()
+            image.convert("RGB").save(img_buf, format="JPEG")
+            img_bytes = img_buf.getvalue()
 
-                combined_price = self.predict_combined_price(
-                    car_brand=car_brand,
-                    car_model=car_model,
-                    car_variant=car_variant,
-                    car_type=car_type,
-                    year=year,
-                    detections_raw=detections_raw,
-                    image_bytes=img_bytes,
-                )
+            combined_price = self.predict_combined_price(
+                car_brand=car_brand,
+                car_model=car_model,
+                car_variant=car_variant,
+                car_type=car_type,
+                year=year,
+                detections_raw=detections_raw,
+                image_bytes=img_bytes,
+            )
             result["combined_price"] = combined_price
+
+            # If RapidAPI returned part-level damages and local models found 0, populate from RapidAPI
+            if combined_price and combined_price.get("damages"):
+                rapid_damages = combined_price.get("damages")
+                if len(detections_list) == 0:
+                    for rd in rapid_damages:
+                        p_name = rd.get("part") or "Vehicle Body"
+                        d_type = rd.get("type") or "damage"
+                        sev = rd.get("severityLabel") or f"Severity {rd.get('severity', '')}"
+                        conf = float(rd.get("confidence", 85))
+                        side_str = f" ({rd.get('side', '')})" if rd.get('side') else ""
+                        detections_list.append({
+                            "car_part": f"{p_name}{side_str}".strip(),
+                            "damage_type": f"{d_type} - {sev}",
+                            "confidence": conf,
+                            "model_type": "RapidAPI Assessment AI",
+                            "repair_action": rd.get("repairAction", ""),
+                            "labor_hours": rd.get("laborHours", 0),
+                            "cost_estimate": rd.get("costEstimate", {}),
+                        })
+                    result["detections"] = detections_list
 
             # 6. 4-Grid Collage Image
             h, w = orig_bgr.shape[:2]

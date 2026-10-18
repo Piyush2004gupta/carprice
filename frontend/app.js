@@ -1531,6 +1531,12 @@ function showResult(data) {
             <div style="font-size:12px; color:#475569; font-weight:600;">
               Part: <span style="background:#e0f2fe; color:#0369a1; padding:3px 8px; border-radius:6px; font-weight:700; border:1px solid #bae6fd;">${d.car_part}</span>
             </div>
+            ${d.repair_action ? `
+            <div style="margin-top:6px; display:flex; flex-wrap:wrap; gap:6px; font-size:11px;">
+              <span style="background:#f8fafc; color:#334155; padding:2px 8px; border-radius:6px; font-weight:700; border:1px solid #e2e8f0; text-transform:capitalize;">🔧 ${d.repair_action}</span>
+              ${d.labor_hours ? `<span style="background:#f0f9ff; color:#0369a1; padding:2px 8px; border-radius:6px; font-weight:700; border:1px solid #bae6fd;">⏱️ ${d.labor_hours} hrs</span>` : ''}
+              ${d.cost_estimate && d.cost_estimate.min ? `<span style="background:#f0fdf4; color:#15803d; padding:2px 8px; border-radius:6px; font-weight:700; border:1px solid #bbf7d0;">₹${fmt(d.cost_estimate.min)} - ₹${fmt(d.cost_estimate.max)}</span>` : ''}
+            </div>` : ''}
           </div>
           <div>
             <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
