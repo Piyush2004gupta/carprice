@@ -290,7 +290,20 @@ class ModelService:
                 except Exception as e:
                     logging.error(f"Error loading YOLO models: {e}")
 
-    def predict_combined_price(self, car_brand, car_model, car_variant, car_type, year, detections_raw, image_bytes=None):
+    def predict_combined_price(
+        self,
+        car_brand,
+        car_model,
+        car_variant,
+        car_type,
+        year,
+        detections_raw,
+        image_bytes=None,
+        currency="INR",
+        country="IN",
+        additional_image_urls=None,
+        reference_image_url=None,
+    ):
         """
         Calculates damage repair costs using RapidAPI Car Damage Assessment AI API:
         https://car-damage-assessment-ai-api-repair-cost-fraud-detection.p.rapidapi.com/analyze
@@ -305,7 +318,10 @@ class ModelService:
                 make=car_brand,
                 model=car_model,
                 year=str(year) if year else "",
-                currency="INR",
+                currency=currency or "INR",
+                country=country or "IN",
+                additional_image_urls=additional_image_urls,
+                reference_image_url=reference_image_url,
             )
             if api_res:
                 parsed = self._parse_rapidapi_response(api_res, detections_raw)
@@ -322,7 +338,19 @@ class ModelService:
             )
         return None
 
-    def _call_rapidapi_damage_assessment(self, image_bytes: bytes, filename: str = "car.jpg", make: str = "", model: str = "", year: str = "", currency: str = "INR"):
+    def _call_rapidapi_damage_assessment(
+        self,
+        image_bytes: bytes,
+        filename: str = "car.jpg",
+        make: str = "",
+        model: str = "",
+        year: str = "",
+        currency: str = "INR",
+        country: str = "IN",
+        language: str = "en",
+        additional_image_urls: list = None,
+        reference_image_url: str = None,
+    ):
         api_key = os.getenv("RAPIDAPI_KEY", "").strip()
         if not api_key:
             return None
@@ -336,8 +364,8 @@ class ModelService:
         }
         data = {
             "currency": currency or "INR",
-            "country": "IN",
-            "language": "en",
+            "country": country or "IN",
+            "language": language or "en",
         }
         if make and make.strip():
             data["make"] = make.strip()
@@ -345,9 +373,18 @@ class ModelService:
             data["model"] = model.strip()
         if year and str(year).strip():
             data["year"] = str(year).strip()
+        if additional_image_urls:
+            if isinstance(additional_image_urls, list):
+                valid_urls = [str(u).strip() for u in additional_image_urls if u and str(u).strip()]
+                if valid_urls:
+                    data["additionalImageUrls"] = ",".join(valid_urls[:5])
+            elif isinstance(additional_image_urls, str) and additional_image_urls.strip():
+                data["additionalImageUrls"] = additional_image_urls.strip()
+        if reference_image_url and str(reference_image_url).strip():
+            data["referenceImageUrl"] = str(reference_image_url).strip()
 
         try:
-            logging.info(f"Calling RapidAPI Car Damage Assessment ({RAPIDAPI_CAR_DAMAGE_HOST})...")
+            logging.info(f"Calling RapidAPI Car Damage Assessment ({RAPIDAPI_CAR_DAMAGE_HOST}) [country={data.get('country')}, currency={data.get('currency')}, extra_angles={bool(additional_image_urls)}]...")
             resp = requests.post(RAPIDAPI_CAR_DAMAGE_URL, headers=headers, files=files, data=data, timeout=60)
             if resp.status_code == 200:
                 logging.info("RapidAPI car damage assessment succeeded.")
@@ -614,7 +651,11 @@ class ModelService:
         car_model: str = "Swift",
         car_variant: str = "Base (synthetic)",
         car_type: str = "Petrol",
-        year: int = 2020
+        year: int = 2020,
+        currency: str = "INR",
+        country: str = "IN",
+        additional_image_urls: list = None,
+        reference_image_url: str = None,
     ):
         self._ensure_models_loaded()
         result = {
@@ -801,6 +842,10 @@ class ModelService:
                 year=year,
                 detections_raw=detections_raw,
                 image_bytes=img_bytes,
+                currency=currency,
+                country=country,
+                additional_image_urls=additional_image_urls,
+                reference_image_url=reference_image_url,
             )
             result["combined_price"] = combined_price
 

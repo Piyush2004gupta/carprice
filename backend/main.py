@@ -814,16 +814,34 @@ async def razorpay_webhook(request: Request,
 # ── Analyze / Predict ─────────────────────────────────────
 @app.post("/api/analyze")
 async def analyze_car(
-    images:      List[UploadFile] = File(...),
-    car_brand:   Optional[str]    = Form("Maruti Suzuki"),
-    car_model:   Optional[str]    = Form("Swift"),
-    car_variant: Optional[str]    = Form("Base (synthetic)"),
-    car_type:    Optional[str]    = Form("Petrol"),
-    year:        Optional[int]    = Form(2020),
+    images:            List[UploadFile]             = File(...),
+    additional_images: Optional[List[UploadFile]]   = File(None),
+    car_brand:         Optional[str]                = Form("Maruti Suzuki"),
+    car_model:         Optional[str]                = Form("Swift"),
+    car_variant:       Optional[str]                = Form("Base (synthetic)"),
+    car_type:          Optional[str]                = Form("Petrol"),
+    year:              Optional[int]                = Form(2020),
+    currency:          Optional[str]                = Form("INR"),
+    country:           Optional[str]                = Form("IN"),
     user=Depends(current_user),
 ):
     if len(images) > 1:
-        return {"success": False, "analysis_message": "Please upload only 1 car photo at a time.", "results": []}
+        return {"success": False, "analysis_message": "Please upload only 1 main car photo at a time (use Extra Angles for additional photos).", "results": []}
+
+    # Upload any additional angle photos to S3 to pass as additionalImageUrls to RapidAPI
+    extra_urls = []
+    if additional_images:
+        for idx, extra_img in enumerate(additional_images[:5]):
+            try:
+                extra_bytes = await extra_img.read()
+                if extra_bytes and len(extra_bytes) > 0:
+                    extra_url = upload_file_to_s3(
+                        extra_bytes, f"{user['email']}_angle{idx+1}_{extra_img.filename or 'extra.jpg'}"
+                    )
+                    if extra_url:
+                        extra_urls.append(extra_url)
+            except Exception as e:
+                logging.warning(f"Error uploading extra angle photo: {e}")
 
     results = []
     for image in images:
@@ -839,11 +857,14 @@ async def analyze_car(
             img.save(buffered, format="JPEG")
             orig_b64 = "data:image/jpeg;base64," + base64.b64encode(buffered.getvalue()).decode()
 
-            # Run AI analysis
+            # Run AI analysis with country, currency, and multi-angle URLs
             analysis = model_service.analyze_car(
                 img,
                 car_brand=car_brand, car_model=car_model,
                 car_variant=car_variant, car_type=car_type, year=year,
+                currency=currency or "INR",
+                country=country or "IN",
+                additional_image_urls=extra_urls if extra_urls else None,
             )
 
             # Upload predicted/annotated image to S3
@@ -874,11 +895,14 @@ async def analyze_car(
                 "car_variant": car_variant or "",
                 "car_type":    car_type    or "",
                 "year":        str(year)   if year else "",
+                "currency":    currency    or "INR",
+                "country":     country     or "IN",
                 "filename":    image.filename or "",
 
                 # ── S3 URLs ──
                 "s3_url":           s3_url or "",
                 "s3_predicted_url": s3_predicted_url or "",
+                "additional_image_urls": extra_urls,
 
                 # ── AI Summary ──
                 "damage_message":  analysis.get("message", ""),
@@ -921,6 +945,7 @@ async def analyze_car(
                 "combined_price":        analysis.get("combined_price"),
                 "car_vs_noncar":         analysis.get("car_vs_noncar"),
                 "car_damage_classifier": analysis.get("car_damage_classifier"),
+                "additional_image_urls": extra_urls,
                 "analysis_message":      analysis["message"],
             })
         except Exception as e:

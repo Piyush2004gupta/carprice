@@ -1103,6 +1103,53 @@ document.addEventListener('DOMContentLoaded', async () => {
       startCamera();
     });
   }
+
+  // ── Multi-Angle Photos Handler ──
+  const extraFileInput = document.getElementById('car-extra-images');
+  const extraPreviews = document.getElementById('extra-photos-previews');
+  const extraCountEl = document.getElementById('extra-photos-count');
+
+  window._extraPhotoFiles = [];
+
+  function renderExtraPreviews() {
+    if (!extraPreviews) return;
+    extraPreviews.innerHTML = '';
+    window._extraPhotoFiles.forEach((file, idx) => {
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'position:relative; width:80px; height:80px; border-radius:10px; overflow:hidden; border:1.5px solid #cbd5e1; box-shadow:0 2px 6px rgba(0,0,0,0.06); background:#000;';
+      const img = document.createElement('img');
+      img.src = URL.createObjectURL(file);
+      img.style.cssText = 'width:100%; height:100%; object-fit:cover;';
+      const rmBtn = document.createElement('button');
+      rmBtn.type = 'button';
+      rmBtn.innerHTML = '&times;';
+      rmBtn.title = 'Remove photo';
+      rmBtn.style.cssText = 'position:absolute; top:2px; right:2px; width:20px; height:20px; border-radius:50%; background:rgba(239,68,68,0.9); color:#fff; border:none; cursor:pointer; font-size:14px; display:flex; align-items:center; justify-content:center; line-height:1; font-weight:bold;';
+      rmBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        window._extraPhotoFiles.splice(idx, 1);
+        renderExtraPreviews();
+      });
+      wrap.appendChild(img);
+      wrap.appendChild(rmBtn);
+      extraPreviews.appendChild(wrap);
+    });
+    if (extraCountEl) extraCountEl.textContent = `${window._extraPhotoFiles.length} / 5 extra`;
+  }
+
+  if (extraFileInput) {
+    extraFileInput.addEventListener('change', () => {
+      const files = Array.from(extraFileInput.files || []);
+      for (const f of files) {
+        if (!f.type.startsWith('image/')) continue;
+        if (window._extraPhotoFiles.length < 5) {
+          window._extraPhotoFiles.push(f);
+        }
+      }
+      extraFileInput.value = '';
+      renderExtraPreviews();
+    });
+  }
 });
 
 // ── Form submission (delegated) ───────────────────────────
@@ -1152,11 +1199,18 @@ document.addEventListener('submit', async (e) => {
   try {
     const formData = new FormData();
     for (let i = 0; i < imageFiles.length; i++) formData.append('images', imageFiles[i]);
+    if (window._extraPhotoFiles && window._extraPhotoFiles.length > 0) {
+      for (let i = 0; i < window._extraPhotoFiles.length; i++) {
+        formData.append('additional_images', window._extraPhotoFiles[i]);
+      }
+    }
     formData.append('car_brand',   document.getElementById('car-brand').value);
     formData.append('car_model',   document.getElementById('car-model').value);
     formData.append('car_variant', document.getElementById('car-variant').value);
     formData.append('car_type',    document.getElementById('car-type').value);
     formData.append('year',        document.getElementById('car-year').value);
+    formData.append('country',     document.getElementById('car-country')?.value || 'IN');
+    formData.append('currency',    document.getElementById('car-currency')?.value || 'INR');
 
     const session = getAuthSession();
     const response = await fetch(`${getApiBaseUrl()}/api/analyze`, {
@@ -1572,6 +1626,13 @@ function resetForm() {
   const resultPanel = document.getElementById('result-panel');
   if (form) { form.reset(); form.style.display = 'flex'; }
   if (resultPanel) resultPanel.style.display = 'none';
+
+  // Reset extra angle photos state
+  window._extraPhotoFiles = [];
+  const extraPreviews = document.getElementById('extra-photos-previews');
+  if (extraPreviews) extraPreviews.innerHTML = '';
+  const extraCountEl = document.getElementById('extra-photos-count');
+  if (extraCountEl) extraCountEl.textContent = '0 / 5 extra';
 }
 
 const resetBtn = document.getElementById('reset-btn');
