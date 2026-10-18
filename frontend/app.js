@@ -1301,8 +1301,9 @@ function createCombinedPriceCard(cp, detections) {
   const gstPct  = cp.gst_rate > 1 ? cp.gst_rate.toFixed(1) : ((cp.gst_rate || 0.18) * 100).toFixed(0);
 
   const damageBadgesHTML = detections.map(d => `
-    <span style="font-size:11px; padding:5px 12px; border-radius:20px; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; font-weight:700; display:inline-flex; align-items:center; gap:6px;">
+    <span style="font-size:11px; padding:6px 14px; border-radius:20px; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; font-weight:700; display:inline-flex; align-items:center; gap:6px; flex-wrap:wrap;">
       <strong style="text-transform:capitalize;">${d.damage_type}</strong> &nbsp;—&nbsp; ${d.car_part}
+      ${d.repair_action ? `<span style="font-size:10px; padding:2px 8px; border-radius:8px; background:${d.repair_action.toLowerCase().includes('replace') ? '#fee2e2' : '#ecfdf5'}; color:${d.repair_action.toLowerCase().includes('replace') ? '#b91c1c' : '#047857'}; font-weight:800; text-transform:uppercase; border:1px solid ${d.repair_action.toLowerCase().includes('replace') ? '#fca5a5' : '#a7f3d0'};">${d.repair_action}</span>` : ''}
     </span>
   `).join("");
 

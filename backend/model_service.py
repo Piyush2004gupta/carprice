@@ -849,26 +849,26 @@ class ModelService:
             )
             result["combined_price"] = combined_price
 
-            # If RapidAPI returned part-level damages and local models found 0, populate from RapidAPI
-            if combined_price and combined_price.get("damages"):
+            # If RapidAPI returned part-level damages, synchronize detections_list with RapidAPI's structured damages
+            if combined_price and combined_price.get("damages") and len(combined_price.get("damages")) > 0:
                 rapid_damages = combined_price.get("damages")
-                if len(detections_list) == 0:
-                    for rd in rapid_damages:
-                        p_name = rd.get("part") or "Vehicle Body"
-                        d_type = rd.get("type") or "damage"
-                        sev = rd.get("severityLabel") or f"Severity {rd.get('severity', '')}"
-                        conf = float(rd.get("confidence", 85))
-                        side_str = f" ({rd.get('side', '')})" if rd.get('side') else ""
-                        detections_list.append({
-                            "car_part": f"{p_name}{side_str}".strip(),
-                            "damage_type": f"{d_type} - {sev}",
-                            "confidence": conf,
-                            "model_type": "RapidAPI Assessment AI",
-                            "repair_action": rd.get("repairAction", ""),
-                            "labor_hours": rd.get("laborHours", 0),
-                            "cost_estimate": rd.get("costEstimate", {}),
-                        })
-                    result["detections"] = detections_list
+                rapid_detections = []
+                for rd in rapid_damages:
+                    p_name = rd.get("part") or "Vehicle Body"
+                    d_type = rd.get("type") or "damage"
+                    sev = rd.get("severityLabel") or f"Severity {rd.get('severity', '')}"
+                    conf = float(rd.get("confidence", 85))
+                    side_str = f" ({rd.get('side', '')})" if rd.get('side') else ""
+                    rapid_detections.append({
+                        "car_part": f"{p_name}{side_str}".strip(),
+                        "damage_type": f"{d_type} ({sev})",
+                        "confidence": conf,
+                        "model_type": "RapidAPI Assessment AI",
+                        "repair_action": rd.get("repairAction", ""),
+                        "labor_hours": rd.get("laborHours", 0),
+                        "cost_estimate": rd.get("costEstimate", {}),
+                    })
+                result["detections"] = rapid_detections
 
             # 6. 4-Grid Collage Image
             h, w = orig_bgr.shape[:2]
